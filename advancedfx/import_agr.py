@@ -1,7 +1,7 @@
 # Copyright (c) advancedfx.org
 #
 # Last changes:
-# 2016-07-27 dominik.matrixstorm.com
+# 2016-08-05 dominik.matrixstorm.com
 #
 # First changes:
 # 2016-07-19 dominik.matrixstorm.com
@@ -15,6 +15,8 @@ import bpy, bpy.props, bpy.ops
 import mathutils
 
 from io_scene_valvesource import import_smd as vs_import_smd, utils as vs_utils
+
+from .utils import QAngle
 
 class GAgrImporter:
 	qc = None
@@ -84,24 +86,6 @@ def ReadVector(file, quakeFormat = False):
 		return None
 	
 	return mathutils.Vector((-y,x,z)) if quakeFormat else mathutils.Vector((x,y,z))
-
-class QAngle:
-	def __init__(self,x,y,z):
-		self.x = x
-		self.y = y
-		self.z = z
-		
-	def to_quaternion(self):
-		pitchH = 0.5 * math.radians(self.x)
-		qPitchY = mathutils.Quaternion((math.cos(pitchH), -math.sin(pitchH), 0.0, 0.0))
-		
-		yawH = 0.5 * math.radians(self.y)
-		qYawZ = mathutils.Quaternion((math.cos(yawH), 0.0, 0.0, math.sin(yawH)))
-		 
-		rollH = 0.5 * math.radians(self.z)
-		qRollX = mathutils.Quaternion((math.cos(rollH), 0.0, math.sin(rollH), 0.0))
-		 
-		return qYawZ * qPitchY * qRollX
 
 def ReadQAngle(file):
 	x = ReadDouble(file)
@@ -384,7 +368,7 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 					if modelHandle is not None:
 						# Make removed ent invisible:
 						time = time -firstTime
-						time = time * fps
+						time = 1.0 + time * fps
 						modelData = modelHandleToModelData.get(modelHandle, False)
 						curves = modelData.curves
 						bpy.context.scene.objects.active = modelData.qc.ref_mesh
@@ -409,7 +393,7 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 						if None == firstTime:
 							firstTime = time
 						time = time -firstTime
-						time = time * fps
+						time = 1.0 + time * fps
 						
 						modelName = dict.Read(file) if dict.Peekaboo(file, 'modelName') else None
 						
