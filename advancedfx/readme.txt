@@ -34,6 +34,10 @@ the full path to the folder structure with the decompiled models.
 
 Changelog:
 
+1.0.1 (2016-08-10T12:48Z):
+- Fixed HLAE AGR Import failing when missing model was marked as deleted in
+  AGR (should now report the missing model(s) instead as intended)
+
 1.0.0 (2016-08-09T16:17Z):
 - Added HLAE BVH Import
 - Added HLAE BVH Export

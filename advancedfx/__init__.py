@@ -11,7 +11,7 @@ import bpy
 bl_info = {
 	"name": "advancedfx Blender Scripts",
 	"author": "Dominik Tugend",
-	"version": (0, 0, 1),
+	"version": (1, 0, 1),
 	"blender": (2, 77, 0),
 	"location": "File > Import/Export",
 	"description": "Supports importing afxGameRecord (.agr) and importing/exporting HLAE Camera Motion (.bvh) files.",

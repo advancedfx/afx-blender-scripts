@@ -404,11 +404,12 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 						if (modelHandle is not None) and (modelHandle.modelName != modelName):
 							# Switched model, make old model invisible:
 							modelData = modelHandleToModelData.get(modelHandle, False)
-							curves = modelData.curves
-							bpy.context.scene.objects.active = modelData.qc.ref_mesh
-							curves[0].keyframe_points.add(1)
-							curves[0].keyframe_points[-1].co = [time, 1.0]
-							curves[0].keyframe_points[-1].interpolation = 'CONSTANT'
+							if modelData is not None: # this can happen if the model could not be loaded
+								curves = modelData.curves
+								bpy.context.scene.objects.active = modelData.qc.ref_mesh
+								curves[0].keyframe_points.add(1)
+								curves[0].keyframe_points[-1].co = [time, 1.0]
+								curves[0].keyframe_points[-1].interpolation = 'CONSTANT'
 						
 						if modelHandle is None:
 							modelHandle = ModelHandle(handle, modelName)
