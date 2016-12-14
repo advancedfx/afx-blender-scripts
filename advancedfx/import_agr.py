@@ -1,7 +1,7 @@
 # Copyright (c) advancedfx.org
 #
 # Last changes:
-# 2016-08-05 dominik.matrixstorm.com
+# 2016-12-14 dominik.matrixstorm.com
 #
 # First changes:
 # 2016-07-19 dominik.matrixstorm.com
@@ -179,6 +179,7 @@ class ModelData:
 		self.qc = qc
 		self.smd = smd
 		self.curves = []
+		self.lastRenderRotQuat = None
 		
 
 class AgrImporter(bpy.types.Operator, vs_utils.Logger):
@@ -370,11 +371,12 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 						time = time -firstTime
 						time = 1.0 + time * fps
 						modelData = modelHandleToModelData.get(modelHandle, False)
-						curves = modelData.curves
-						bpy.context.scene.objects.active = modelData.qc.ref_mesh
-						curves[0].keyframe_points.add(1)
-						curves[0].keyframe_points[-1].co = [time, 1.0]
-						curves[0].keyframe_points[-1].interpolation = 'CONSTANT'
+						if modelData is not None: # this can happen if the model could not be loaded
+							curves = modelData.curves
+							bpy.context.scene.objects.active = modelData.qc.ref_mesh
+							curves[0].keyframe_points.add(1)
+							curves[0].keyframe_points[-1].co = [time, 1.0]
+							curves[0].keyframe_points[-1].interpolation = 'CONSTANT'
 				
 				elif 'entity_state' == node0:
 					stupidCount = stupidCount +1
@@ -428,6 +430,15 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 						renderRotQuat = renderAngles.to_quaternion()
 						
 						if modelData is not None:
+							
+							# make sure we take the shortest path:
+							if modelData.lastRenderRotQuat is not None:
+								dot = modelData.lastRenderRotQuat.dot(renderRotQuat)
+								if dot < 0:
+									renderRotQuat.negate()
+							modelData.lastRenderRotQuat = renderRotQuat
+							
+							
 							curves = modelData.curves
 							
 							bpy.context.scene.objects.active = modelData.qc.ref_mesh
@@ -435,7 +446,6 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 							curves[0].keyframe_points[-1].co = [time, 0.0 if visible else 1.0]
 							curves[0].keyframe_points[-1].interpolation = 'CONSTANT'
 							
-							# TODO: Respect last rotation maybe (so we take shortest path)?
 							bpy.context.scene.objects.active = modelData.smd.a
 							curves[1+0].keyframe_points.add(1)
 							curves[1+0].keyframe_points[-1].co = [time, renderOrigin.x]

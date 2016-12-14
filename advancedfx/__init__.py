@@ -1,7 +1,7 @@
 # Copyright (c) advancedfx.org
 #
 # Last changes:
-# 2016-08-09 dominik.matrixstorm.com
+# 2016-12-14 dominik.matrixstorm.com
 #
 # First changes:
 # 2016-07-19 dominik.matrixstorm.com
@@ -11,7 +11,7 @@ import bpy
 bl_info = {
 	"name": "advancedfx Blender Scripts",
 	"author": "Dominik Tugend",
-	"version": (1, 0, 1),
+	"version": (1, 0, 2),
 	"blender": (2, 77, 0),
 	"location": "File > Import/Export",
 	"description": "Supports importing afxGameRecord (.agr) and importing/exporting HLAE Camera Motion (.bvh) files.",
