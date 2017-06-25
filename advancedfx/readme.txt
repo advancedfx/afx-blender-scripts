@@ -34,8 +34,11 @@ the full path to the folder structure with the decompiled models.
 
 Changelog:
 
+1.1.0 (2017-06-25T20:02Z):
+- Updated HLAE AGR Import to agr version 1
+
 1.0.2 (2016-12-14T12:36Z):
-- Fixed HLAE AGR Import to not always take the shortest path for Euler based
+- Fixed HLAE AGR Import so now it will always take the shortest path for Euler based
   rotation of the models between two keyframes.
 
 1.0.1 (2016-08-10T12:48Z):

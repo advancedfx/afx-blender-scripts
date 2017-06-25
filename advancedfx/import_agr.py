@@ -1,7 +1,7 @@
 # Copyright (c) advancedfx.org
 #
 # Last changes:
-# 2016-12-14 dominik.matrixstorm.com
+# 2017-06-25 dominik.matrixstorm.com
 #
 # First changes:
 # 2016-07-19 dominik.matrixstorm.com
@@ -19,7 +19,6 @@ from io_scene_valvesource import import_smd as vs_import_smd, utils as vs_utils
 from .utils import QAngle
 
 class GAgrImporter:
-	qc = None
 	smd = None
 
 class SmdImporterEx(vs_import_smd.SmdImporter):
@@ -27,6 +26,7 @@ class SmdImporterEx(vs_import_smd.SmdImporter):
 	
 	filepath = bpy.props.StringProperty(subtype="FILE_PATH")
 
+	doAnim = bpy.props.BoolProperty(name="", default=True)
 	skipRemDoubles = bpy.props.BoolProperty(name="",description="",default=False)
 	append = bpy.props.EnumProperty(name="",description="",items=(
 		('VALIDATE',"",""),
@@ -40,15 +40,71 @@ class SmdImporterEx(vs_import_smd.SmdImporter):
 		self.existingBones = []
 		self.num_files_imported = 0
 		self.readQC(self.filepath, False, False, False, 'XYZ', outer_qc = True)
-		GAgrImporter.qc = self.qc
 		GAgrImporter.smd = self.smd
 		return {'FINISHED'}
+
+
+class BufferedFile:
+	def __init__(self,filePath):
+		self.b = bytearray(1048576)
+		self.index = 0
+		self.numread = 0
+		self.file = open(filePath, 'rb')
+		self.filePos = 0
+		if self.file:
+			self.file.seek(0, 2)
+			self.fileSize = self.file.tell()
+			self.file.seek(0, 0)
+		else:
+			self.fileSize = 0
+	
+	def Read(self,readBytes):
+		result = bytearray()
+
+		if self.file is None:
+			return result
+		
+		while 0 < readBytes:
+			bytesLeft = self.numread -self.index
+			bytesNow = min(bytesLeft, readBytes)
+			
+			if 0 >= bytesNow:
+				self.index = 0
+				self.numread = self.file.readinto(self.b)
+				if not self.numread:
+					return result
+				continue
+			
+			result += self.b[self.index : (self.index +bytesNow)]
+			self.index += bytesNow
+			self.filePos += bytesNow
+			readBytes -= bytesNow
+		
+		return result
+		
+	def FileSize(self):
+		if not self.file:
+			return None
+			
+		return self.fileSize
+		
+	def Tell(self):
+		if not self.file:
+			return None
+		
+		return self.filePos;
+		
+	
+	def Close(self):
+		if self.file is not None:
+			self.file.close();
+			self.file = None
 
 
 def ReadString(file):
 	buf = bytearray()
 	while True:
-		b = file.read(1)
+		b = file.Read(1)
 		if len(b) < 1:
 			return None
 		elif b == b"\0":
@@ -57,67 +113,73 @@ def ReadString(file):
 			buf.append(b[0])
 
 def ReadBool(file):
-	buf = file.read(1)
+	buf = file.Read(1)
 	if(len(buf) < 1):
 		return None
 	return struct.unpack('<?', buf)[0]
 
 def ReadInt(file):
-	buf = file.read(4)
+	buf = file.Read(4)
 	if(len(buf) < 4):
 		return None
 	return struct.unpack('<i', buf)[0]
+	
+def ReadFloat(file):
+	buf = file.Read(4)
+	if(len(buf) < 4):
+		return None
+	return struct.unpack('<f', buf)[0]
 
 def ReadDouble(file):
-	buf = file.read(8)
+	buf = file.Read(8)
 	if(len(buf) < 8):
 		return None
 	return struct.unpack('<d', buf)[0]
 	
 def ReadVector(file, quakeFormat = False):
-	x = ReadDouble(file)
+	x = ReadFloat(file)
 	if x is None:
 		return None
-	y = ReadDouble(file)
+	y = ReadFloat(file)
 	if y is None:
 		return None
-	z = ReadDouble(file)
+	z = ReadFloat(file)
 	if z is None:
 		return None
 	
 	return mathutils.Vector((-y,x,z)) if quakeFormat else mathutils.Vector((x,y,z))
 
 def ReadQAngle(file):
-	x = ReadDouble(file)
+	x = ReadFloat(file)
 	if x is None:
 		return None
-	y = ReadDouble(file)
+	y = ReadFloat(file)
 	if y is None:
 		return None
-	z = ReadDouble(file)
+	z = ReadFloat(file)
 	if z is None:
 		return None
 	
 	return QAngle(x,y,z)
 
 def ReadQuaternion(file, quakeFormat = False):
-	x = ReadDouble(file)
+	x = ReadFloat(file)
 	if x is None:
 		return None
-	y = ReadDouble(file)
+	y = ReadFloat(file)
 	if y is None:
 		return None
-	z = ReadDouble(file)
+	z = ReadFloat(file)
 	if z is None:
 		return None
-	w = ReadDouble(file)
+	w = ReadFloat(file)
 	if w is None:
 		return None
 	
 	return mathutils.Quaternion((w,-y,x,z)) if quakeFormat else mathutils.Quaternion((w,x,y,z))
 
 def ReadAgrVersion(file):
-	buf = file.read(14)
+	buf = file.Read(14)
 	if len(buf) < 14:
 		return None
 	
@@ -175,12 +237,17 @@ class ModelHandle:
 		return (self.handle, self.modelName) == (other.handle, other.modelName)
 		
 class ModelData:
-	def __init__(self,qc,smd):
-		self.qc = qc
+	def __init__(self,smd):
 		self.smd = smd
 		self.curves = []
 		self.lastRenderRotQuat = None
 		
+class CameraData:
+	def __init__(self,o,c):
+		self.o = o
+		self.c = c
+		self.curves = []
+	
 
 class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 	bl_idname = "advancedfx.agr_importer"
@@ -216,6 +283,7 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 	
 	# class properties
 	valveMatrixToBlender = mathutils.Matrix.Rotation(math.pi/2,4,'Z')
+	blenderCamUpQuat = mathutils.Quaternion((math.cos(0.5 * math.radians(90.0)), math.sin(0.5* math.radians(90.0)), 0.0, 0.0))
 	
 	def execute(self, context):
 		try:
@@ -245,23 +313,20 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 		filePath = self.assetPath.rstrip("/\\") + "/" +modelHandle.modelName
 		filePath = os.path.splitext(filePath)[0] + ".qc"
 		
-		GAgrImporter.qc = None
 		GAgrImporter.smd = None
 		modelData = None
 		
 		try:
 			#bpy.ops.import_scene.smd(filepath=filePath,files=[],doAnim=False)
-			bpy.ops.advancedfx.smd_importer_ex(filepath=filePath)
-			modelData = ModelData(GAgrImporter.qc,GAgrImporter.smd)
+			bpy.ops.advancedfx.smd_importer_ex(filepath=filePath, doAnim=False)
+			modelData = ModelData(GAgrImporter.smd)
 		except:
 			self.error("Failed to import \""+filePath+"\".")
 			return None
 		finally:
-			GAgrImporter.qc = None
 			GAgrImporter.smd = None
 			
 		a = modelData.smd.a
-		qc = modelData.qc
 		
 		# Update name:
 		a.name = "afx."+str(modelHandle.handle) # this is too long: +"."+modelHandle.modelName + a.name[a.name.rfind(".")+1:]
@@ -279,26 +344,14 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 		a.scale[1] = self.global_scale
 		a.scale[2] = self.global_scale
 		
-		# Render visibilty set-up:
-		for x in a.children:
-			if x != qc.ref_mesh:
-				x.hide_render = True
-		
 		# Create actions and their curves (boobs):
-		
-		bpy.context.scene.objects.active = qc.ref_mesh
-		
-		qc.ref_mesh.animation_data_create()
-		action = bpy.data.actions.new(name="game_data")
-		qc.ref_mesh.animation_data.action = action
-		
-		modelData.curves.append(action.fcurves.new("hide_render"))
-		
 		bpy.context.scene.objects.active = a
 		
 		a.animation_data_create()
 		action = bpy.data.actions.new(name="game_data")
 		a.animation_data.action = action
+
+		modelData.curves.append(action.fcurves.new("hide_render"))
 		
 		for i in range(3):
 			modelData.curves.append(action.fcurves.new("location",index = i))
@@ -318,20 +371,68 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 			
 			for j in range(4):
 				modelData.curves.append(action.fcurves.new(bone_string + "rotation_quaternion",index = j))
+				
+		# Create visiblity driver:
+		
+		for child in a.children:
+			d = child.driver_add('hide_render').driver
+			d.type = 'AVERAGE'
+			v = d.variables.new()
+			v.name = 'hide_render'
+			v.targets[0].id = a
+			v.targets[0].data_path = 'hide_render'
 		
 		return modelData
+		
+	def createCamera(self, context, camName):
+		
+		camBData = bpy.data.cameras.new(camName)
+		o = bpy.data.objects.new(camName, camBData)
+		c = bpy.data.cameras[o.name]
+
+		context.scene.objects.link(o)
+
+		o.select = True
+		context.scene.objects.active = o
+			
+		camData = CameraData(o,c)
+			
+		# Rotation mode:
+		if o.rotation_mode != 'QUATERNION':
+			o.rotation_mode = 'QUATERNION'
+				
+		
+		# Create actions and their curves (boobs):
+		
+		bpy.context.scene.objects.active = o
+		
+		o.animation_data_create()
+		action = bpy.data.actions.new(name="game_data")
+		o.animation_data.action = action
+		
+		for i in range(3):
+			camData.curves.append(action.fcurves.new("location",index = i))
+		
+		for i in range(4):
+			camData.curves.append(action.fcurves.new("rotation_quaternion",index = i))
+			
+		c.animation_data_create()
+		action = bpy.data.actions.new(name="game_data")
+		c.animation_data.action = action
+			
+		camData.curves.append(action.fcurves.new("lens"))
+		
+		return camData
 	
 	def readAgr(self,context):
 		file = None
 		
 		try:
-			file = open(self.filepath, 'rb')
+			file = BufferedFile(self.filepath)
 			
-			file.seek(0, 2)
-			fileSize = file.tell()
-			file.seek(0, 0)
+			fileSize = file.FileSize()
 			
-			context.window_manager.progress_begin(0.0,1.0)
+			context.window_manager.progress_begin(0.0, 1.0)
 			
 			version = ReadAgrVersion(file)
 			
@@ -339,31 +440,44 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 				self.error('Invalid file format.')
 				return False
 				
-			if 0 != version:
+			if 1 != version:
 				self.error('Version '+str(version)+' is not supported!')
 				return False
+				
 			
 			firstTime = None
 			dict = AgrDictionary()
 			modelHandleToModelData = {}
 			handleToLastModelHandle = {}
 			fps = context.scene.render.fps
+			lastCameraQuat = None
+			camData = None
 			
 			stupidCount = 0
 			
 			while True:
 			
-				if 0 < fileSize:
-					context.window_manager.progress_update(float(file.tell())/float(fileSize))
-			
+				if 0 < fileSize and 0 == stupidCount % 100:
+					val = float(file.Tell())/float(fileSize)
+					context.window_manager.progress_update(val)
+					print("%f " % (100*val))
+				
+				stupidCount = stupidCount +1
+				
+				if 4096 <= stupidCount:
+					stupidCount = 0
+					gc.collect()
+					#break
+				
 				node0 = dict.Read(file)
+				
 				
 				if node0 is None:
 					break
 					
 				elif 'deleted' == node0:
 					handle = ReadInt(file)
-					time = ReadDouble(file)
+					time = ReadFloat(file)
 					
 					modelHandle = handleToLastModelHandle.get(handle, None)
 					if modelHandle is not None:
@@ -373,33 +487,26 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 						modelData = modelHandleToModelData.get(modelHandle, False)
 						if modelData is not None: # this can happen if the model could not be loaded
 							curves = modelData.curves
-							bpy.context.scene.objects.active = modelData.qc.ref_mesh
+							bpy.context.scene.objects.active = modelData.smd.a
 							curves[0].keyframe_points.add(1)
 							curves[0].keyframe_points[-1].co = [time, 1.0]
 							curves[0].keyframe_points[-1].interpolation = 'CONSTANT'
 				
 				elif 'entity_state' == node0:
-					stupidCount = stupidCount +1
-					
-					if 4096 <= stupidCount:
-						stupidCount = 0
-						gc.collect()
-						# break
-					
 					visible = None
 					time = None
 					modelData = None
-					handle = ReadInt(file) if dict.Peekaboo(file,'handle') else None
+					handle = ReadInt(file)
 					if dict.Peekaboo(file,'baseentity'):
-						time = ReadDouble(file) if dict.Peekaboo(file, 'time') else None
+						time = ReadFloat(file)
 						if None == firstTime:
 							firstTime = time
 						time = time -firstTime
 						time = 1.0 + time * fps
 						
-						modelName = dict.Read(file) if dict.Peekaboo(file, 'modelName') else None
+						modelName = dict.Read(file)
 						
-						visible = ReadBool(file) if dict.Peekaboo(file, 'visible') else None
+						visible = ReadBool(file)
 						
 						modelHandle = handleToLastModelHandle.get(handle, None)
 						
@@ -408,7 +515,7 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 							modelData = modelHandleToModelData.get(modelHandle, False)
 							if modelData is not None: # this can happen if the model could not be loaded
 								curves = modelData.curves
-								bpy.context.scene.objects.active = modelData.qc.ref_mesh
+								bpy.context.scene.objects.active = modelData.smd.a
 								curves[0].keyframe_points.add(1)
 								curves[0].keyframe_points[-1].co = [time, 1.0]
 								curves[0].keyframe_points[-1].interpolation = 'CONSTANT'
@@ -423,8 +530,8 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 							modelData = self.importModel(context, modelHandle)
 							modelHandleToModelData[modelHandle] = modelData
 						
-						renderOrigin = ReadVector(file, quakeFormat=True) if dict.Peekaboo(file, 'renderOrigin') else None
-						renderAngles = ReadQAngle(file) if dict.Peekaboo(file, 'renderAngles') else None
+						renderOrigin = ReadVector(file, quakeFormat=True)
+						renderAngles = ReadQAngle(file)
 						
 						renderOrigin = renderOrigin * self.global_scale
 						renderRotQuat = renderAngles.to_quaternion()
@@ -441,12 +548,11 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 							
 							curves = modelData.curves
 							
-							bpy.context.scene.objects.active = modelData.qc.ref_mesh
+							bpy.context.scene.objects.active = modelData.smd.a
 							curves[0].keyframe_points.add(1)
 							curves[0].keyframe_points[-1].co = [time, 0.0 if visible else 1.0]
 							curves[0].keyframe_points[-1].interpolation = 'CONSTANT'
 							
-							bpy.context.scene.objects.active = modelData.smd.a
 							curves[1+0].keyframe_points.add(1)
 							curves[1+0].keyframe_points[-1].co = [time, renderOrigin.x]
 							curves[1+0].keyframe_points[-1].interpolation = 'LINEAR'
@@ -468,14 +574,13 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 							curves[1+6].keyframe_points.add(1)
 							curves[1+6].keyframe_points[-1].co = [time, renderRotQuat.z]
 							curves[1+6].keyframe_points[-1].interpolation = 'LINEAR'
-						
-						dict.Peekaboo(file,'/')
 					
 					if dict.Peekaboo(file,'baseanimating'):
-						skin = ReadInt(file) if dict.Peekaboo(file,'skin') else None
-						body = ReadInt(file) if dict.Peekaboo(file,'body') else None
-						sequence  = ReadInt(file) if dict.Peekaboo(file,'sequence') else None
-						if dict.Peekaboo(file,'boneList'):
+						skin = ReadInt(file)
+						body = ReadInt(file)
+						sequence  = ReadInt(file)
+						hasBoneList = ReadBool(file)
+						if hasBoneList:
 							numBones = ReadInt(file)
 							
 							for i in range(numBones):
@@ -528,15 +633,75 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 									curves[8+i*7+6].keyframe_points[-1].co = [time, bone.rotation_quaternion.z]
 									curves[8+i*7+6].keyframe_points[-1].interpolation = 'LINEAR'
 						
-						dict.Peekaboo(file,'/')
+					dict.Peekaboo(file,'/')
 					
-					viewModel = ReadBool(file) if dict.Peekaboo(file,'viewmodel') else None
+					viewModel = ReadBool(file)
 					
 					#if modelData is not None:
 					#	for fc in modelData.curves:
 					#		fc.update()
 					
-					dict.Peekaboo(file,'/')
+				elif 'afxCam' == node0:
+					
+					if camData is None:
+						camData = self.createCamera(context,"afxCam")
+					
+						if camData is None:
+							self.error("Failed to create camera.")
+							return False
+					
+				
+					time = ReadFloat(file)
+					if None == firstTime:
+						firstTime = time
+					time = time -firstTime
+					time = 1.0 + time * fps
+					
+					renderOrigin = ReadVector(file, quakeFormat=True)
+					renderAngles = ReadQAngle(file)
+					
+					fov = ReadFloat(file)
+					
+					lens = camData.c.sensor_width / (2.0 * math.tan(math.radians(fov) / 2.0))
+					
+					renderOrigin = renderOrigin * self.global_scale
+					renderRotQuat = renderAngles.to_quaternion() * self.blenderCamUpQuat
+					
+					# make sure we take the shortest path:
+					if lastCameraQuat is not None:
+						dot = lastCameraQuat.dot(renderRotQuat)
+						if dot < 0:
+							renderRotQuat.negate()
+					lastCameraQuat = renderRotQuat
+					
+					curves = camData.curves
+					
+					bpy.context.scene.objects.active = camData.o
+					curves[0].keyframe_points.add(1)
+					curves[0].keyframe_points[-1].co = [time, renderOrigin.x]
+					curves[0].keyframe_points[-1].interpolation = 'LINEAR'
+					curves[1].keyframe_points.add(1)
+					curves[1].keyframe_points[-1].co = [time, renderOrigin.y]
+					curves[1].keyframe_points[-1].interpolation = 'LINEAR'
+					curves[2].keyframe_points.add(1)
+					curves[2].keyframe_points[-1].co = [time, renderOrigin.z]
+					curves[2].keyframe_points[-1].interpolation = 'LINEAR'
+					curves[3].keyframe_points.add(1)
+					curves[3].keyframe_points[-1].co = [time, renderRotQuat.w]
+					curves[3].keyframe_points[-1].interpolation = 'LINEAR'
+					curves[4].keyframe_points.add(1)
+					curves[4].keyframe_points[-1].co = [time, renderRotQuat.x]
+					curves[4].keyframe_points[-1].interpolation = 'LINEAR'
+					curves[5].keyframe_points.add(1)
+					curves[5].keyframe_points[-1].co = [time, renderRotQuat.y]
+					curves[5].keyframe_points[-1].interpolation = 'LINEAR'
+					curves[6].keyframe_points.add(1)
+					curves[6].keyframe_points[-1].co = [time, renderRotQuat.z]
+					curves[6].keyframe_points[-1].interpolation = 'LINEAR'
+					
+					curves[7].keyframe_points.add(1)
+					curves[7].keyframe_points[-1].co = [time, lens]
+					curves[7].keyframe_points[-1].interpolation = 'LINEAR'
 				
 				else:
 					self.warning('Unknown packet at '+str(file.tell()))
@@ -546,6 +711,6 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 			
 		finally:
 			if file is not None:
-				file.close()
+				file.Close()
 		
 		return True
