@@ -34,6 +34,9 @@ the full path to the folder structure with the decompiled models.
 
 Changelog:
 
+1.2.0 (2017-08-02T18:31Z):
+- Updated HLAE AGR Import to agr version 2 (also bug fixes)
+
 1.1.0 (2017-06-25T20:02Z):
 - Updated HLAE AGR Import to agr version 1
 

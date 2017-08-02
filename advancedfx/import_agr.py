@@ -1,7 +1,7 @@
 # Copyright (c) advancedfx.org
 #
 # Last changes:
-# 2017-06-25 dominik.matrixstorm.com
+# 2017-08-02 dominik.matrixstorm.com
 #
 # First changes:
 # 2016-07-19 dominik.matrixstorm.com
@@ -224,24 +224,26 @@ class AgrDictionary:
 			return True
 		
 		return False
-
-class ModelHandle:
-	def __init__(self,handle,modelName):
-		self.handle = handle
-		self.modelName = modelName
-
-	def __hash__(self):
-		return hash((self.handle, self.modelName))
-
-	def __eq__(self, other):
-		return (self.handle, self.modelName) == (other.handle, other.modelName)
 		
 class ModelData:
 	def __init__(self,smd):
 		self.smd = smd
 		self.curves = []
 		self.lastRenderRotQuat = None
-		
+
+class ModelHandle:
+	def __init__(self,objNr,handle,modelName):
+		self.objNr = objNr
+		self.handle = handle
+		self.modelName = modelName
+		self.modelData = False
+
+	def __hash__(self):
+		return hash((self.handle, self.modelName))
+
+	def __eq__(self, other):
+		return (self.handle, self.modelName) == (other.handle, other.modelName)
+
 class CameraData:
 	def __init__(self,o,c):
 		self.o = o
@@ -329,7 +331,11 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 		a = modelData.smd.a
 		
 		# Update name:
-		a.name = "afx."+str(modelHandle.handle) # this is too long: +"."+modelHandle.modelName + a.name[a.name.rfind(".")+1:]
+		name = modelHandle.modelName.rsplit('/',1)
+		name = name[len(name) -1]
+		name = (name[:30] + '..') if len(name) > 30 else name
+		name = "afx." +str(modelHandle.objNr)+"."+str(modelHandle.handle)+ " " + name
+		a.name = name
 		
 		# Fix rotation:
 		if a.rotation_mode != 'QUATERNION':
@@ -352,6 +358,11 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 		a.animation_data.action = action
 
 		modelData.curves.append(action.fcurves.new("hide_render"))
+		
+		# We are lazy, so we use frame 0 to set as not visible (initially) / hide_render 1:
+		modelData.curves[0].keyframe_points.add(1)
+		modelData.curves[0].keyframe_points[-1].co = [0.0, 1.0]
+		modelData.curves[0].keyframe_points[-1].interpolation = 'CONSTANT'
 		
 		for i in range(3):
 			modelData.curves.append(action.fcurves.new("location",index = i))
@@ -440,20 +451,21 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 				self.error('Invalid file format.')
 				return False
 				
-			if 1 != version:
+			if 2 != version:
 				self.error('Version '+str(version)+' is not supported!')
 				return False
 				
 			
 			firstTime = None
 			dict = AgrDictionary()
-			modelHandleToModelData = {}
 			handleToLastModelHandle = {}
 			fps = context.scene.render.fps
 			lastCameraQuat = None
 			camData = None
 			
 			stupidCount = 0
+			
+			objNr = 0
 			
 			while True:
 			
@@ -475,17 +487,34 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 				if node0 is None:
 					break
 					
-				elif 'deleted' == node0:
+				elif 'afxHidden' == node0:
 					handle = ReadInt(file)
 					time = ReadFloat(file)
 					
 					modelHandle = handleToLastModelHandle.get(handle, None)
 					if modelHandle is not None:
+						# Make ent invisible:
+						time = time -firstTime
+						time = 1.0 + time * fps
+						modelData =  modelHandle.modelData
+						if modelData: # this can happen if the model could not be loaded
+							curves = modelData.curves
+							bpy.context.scene.objects.active = modelData.smd.a
+							curves[0].keyframe_points.add(1)
+							curves[0].keyframe_points[-1].co = [time, 1.0]
+							curves[0].keyframe_points[-1].interpolation = 'CONSTANT'
+				
+				elif 'deleted' == node0:
+					handle = ReadInt(file)
+					time = ReadFloat(file)
+					
+					modelHandle = handleToLastModelHandle.pop(handle, None)
+					if modelHandle is not None:
 						# Make removed ent invisible:
 						time = time -firstTime
 						time = 1.0 + time * fps
-						modelData = modelHandleToModelData.get(modelHandle, False)
-						if modelData is not None: # this can happen if the model could not be loaded
+						modelData = modelHandle.modelData
+						if modelData: # this can happen if the model could not be loaded
 							curves = modelData.curves
 							bpy.context.scene.objects.active = modelData.smd.a
 							curves[0].keyframe_points.add(1)
@@ -506,29 +535,32 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 						
 						modelName = dict.Read(file)
 						
-						visible = ReadBool(file)
+						visible = True #visible = ReadBool(file)
 						
 						modelHandle = handleToLastModelHandle.get(handle, None)
 						
 						if (modelHandle is not None) and (modelHandle.modelName != modelName):
 							# Switched model, make old model invisible:
-							modelData = modelHandleToModelData.get(modelHandle, False)
-							if modelData is not None: # this can happen if the model could not be loaded
+							modelData = modelHandle.modelData
+							if modelData: # this can happen if the model could not be loaded
 								curves = modelData.curves
 								bpy.context.scene.objects.active = modelData.smd.a
 								curves[0].keyframe_points.add(1)
 								curves[0].keyframe_points[-1].co = [time, 1.0]
 								curves[0].keyframe_points[-1].interpolation = 'CONSTANT'
+							
+							modelHandle = None
 						
 						if modelHandle is None:
-							modelHandle = ModelHandle(handle, modelName)
+							objNr = objNr + 1
+							modelHandle = ModelHandle(objNr, handle, modelName)
 							handleToLastModelHandle[handle] = modelHandle
 						
-						modelData = modelHandleToModelData.get(modelHandle, False)
-						if modelData == False:
-							# We have no model with this handle yet, so create a new one:
+						modelData = modelHandle.modelData
+						if modelData is False:
+							# We have not tried to import the model for this (new) handle yet, so try to import it:
 							modelData = self.importModel(context, modelHandle)
-							modelHandleToModelData[modelHandle] = modelData
+							modelHandle.modelData = modelData
 						
 						renderOrigin = ReadVector(file, quakeFormat=True)
 						renderAngles = ReadQAngle(file)
@@ -576,9 +608,9 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 							curves[1+6].keyframe_points[-1].interpolation = 'LINEAR'
 					
 					if dict.Peekaboo(file,'baseanimating'):
-						skin = ReadInt(file)
-						body = ReadInt(file)
-						sequence  = ReadInt(file)
+						#skin = ReadInt(file)
+						#body = ReadInt(file)
+						#sequence  = ReadInt(file)
 						hasBoneList = ReadBool(file)
 						if hasBoneList:
 							numBones = ReadInt(file)
