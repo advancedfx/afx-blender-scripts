@@ -30,11 +30,15 @@ The scripts can be accessed through the entries in the import menu
 Don't forget to enter the "Asset Path" when using AGR import, it needs to be
 the full path to the folder structure with the decompiled models.
 
+Notice:
+The interpolation of the curves for the rotations are set to CONSTANT, because
+Blender doesn't support proper interpolation of curves for quaternions yet.
+
 
 
 Changelog:
 
-1.2.0 (2017-08-02T18:31Z):
+1.2.0 (2017-08-03T12:00Z):
 - Updated HLAE AGR Import to agr version 2 (also bug fixes)
 
 1.1.0 (2017-06-25T20:02Z):
