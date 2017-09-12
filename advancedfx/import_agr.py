@@ -1,7 +1,7 @@
 # Copyright (c) advancedfx.org
 #
 # Last changes:
-# 2017-08-02 dominik.matrixstorm.com
+# 2017-09-12 dominik.matrixstorm.com
 #
 # First changes:
 # 2016-07-19 dominik.matrixstorm.com
@@ -44,67 +44,10 @@ class SmdImporterEx(vs_import_smd.SmdImporter):
 		return {'FINISHED'}
 
 
-class BufferedFile:
-	def __init__(self,filePath):
-		self.b = bytearray(1048576)
-		self.index = 0
-		self.numread = 0
-		self.file = open(filePath, 'rb')
-		self.filePos = 0
-		if self.file:
-			self.file.seek(0, 2)
-			self.fileSize = self.file.tell()
-			self.file.seek(0, 0)
-		else:
-			self.fileSize = 0
-	
-	def Read(self,readBytes):
-		result = bytearray()
-
-		if self.file is None:
-			return result
-		
-		while 0 < readBytes:
-			bytesLeft = self.numread -self.index
-			bytesNow = min(bytesLeft, readBytes)
-			
-			if 0 >= bytesNow:
-				self.index = 0
-				self.numread = self.file.readinto(self.b)
-				if not self.numread:
-					return result
-				continue
-			
-			result += self.b[self.index : (self.index +bytesNow)]
-			self.index += bytesNow
-			self.filePos += bytesNow
-			readBytes -= bytesNow
-		
-		return result
-		
-	def FileSize(self):
-		if not self.file:
-			return None
-			
-		return self.fileSize
-		
-	def Tell(self):
-		if not self.file:
-			return None
-		
-		return self.filePos;
-		
-	
-	def Close(self):
-		if self.file is not None:
-			self.file.close();
-			self.file = None
-
-
 def ReadString(file):
 	buf = bytearray()
 	while True:
-		b = file.Read(1)
+		b = file.read(1)
 		if len(b) < 1:
 			return None
 		elif b == b"\0":
@@ -113,25 +56,25 @@ def ReadString(file):
 			buf.append(b[0])
 
 def ReadBool(file):
-	buf = file.Read(1)
+	buf = file.read(1)
 	if(len(buf) < 1):
 		return None
 	return struct.unpack('<?', buf)[0]
 
 def ReadInt(file):
-	buf = file.Read(4)
+	buf = file.read(4)
 	if(len(buf) < 4):
 		return None
 	return struct.unpack('<i', buf)[0]
 	
 def ReadFloat(file):
-	buf = file.Read(4)
+	buf = file.read(4)
 	if(len(buf) < 4):
 		return None
 	return struct.unpack('<f', buf)[0]
 
 def ReadDouble(file):
-	buf = file.Read(8)
+	buf = file.read(8)
 	if(len(buf) < 8):
 		return None
 	return struct.unpack('<d', buf)[0]
@@ -146,6 +89,11 @@ def ReadVector(file, quakeFormat = False):
 	z = ReadFloat(file)
 	if z is None:
 		return None
+		
+	if math.isinf(x) or math.isinf(y) or math.isinf(z):
+		x = 0
+		y = 0
+		z = 0
 	
 	return mathutils.Vector((-y,x,z)) if quakeFormat else mathutils.Vector((x,y,z))
 
@@ -159,6 +107,11 @@ def ReadQAngle(file):
 	z = ReadFloat(file)
 	if z is None:
 		return None
+	
+	if math.isinf(x) or math.isinf(y) or math.isinf(z):
+		x = 0
+		y = 0
+		z = 0
 	
 	return QAngle(x,y,z)
 
@@ -176,10 +129,16 @@ def ReadQuaternion(file, quakeFormat = False):
 	if w is None:
 		return None
 	
+	if math.isinf(x) or math.isinf(y) or math.isinf(z) or math.isinf(w):
+		w = 1
+		x = 0
+		y = 0
+		z = 0
+	
 	return mathutils.Quaternion((w,-y,x,z)) if quakeFormat else mathutils.Quaternion((w,x,y,z))
 
 def ReadAgrVersion(file):
-	buf = file.Read(14)
+	buf = file.read(14)
 	if len(buf) < 14:
 		return None
 	
@@ -229,20 +188,20 @@ class ModelData:
 	def __init__(self,smd):
 		self.smd = smd
 		self.curves = []
+		self.lastRenderOrigin = None
 		self.lastRenderRotQuat = None
 
 class ModelHandle:
-	def __init__(self,objNr,handle,modelName):
+	def __init__(self,objNr,modelName):
 		self.objNr = objNr
-		self.handle = handle
 		self.modelName = modelName
 		self.modelData = False
-
-	def __hash__(self):
-		return hash((self.handle, self.modelName))
-
-	def __eq__(self, other):
-		return (self.handle, self.modelName) == (other.handle, other.modelName)
+#	
+#	def __hash__(self):
+#		return hash((self.handle, self.modelName))
+#	
+#	def __eq__(self, other):
+#		return (self.handle, self.modelName) == (other.handle, other.modelName)
 
 class CameraData:
 	def __init__(self,o,c):
@@ -377,7 +336,7 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 		name = modelHandle.modelName.rsplit('/',1)
 		name = name[len(name) -1]
 		name = (name[:30] + '..') if len(name) > 30 else name
-		name = "afx." +str(modelHandle.objNr)+"."+str(modelHandle.handle)+ " " + name
+		name = "afx." +str(modelHandle.objNr)+ " " + name
 		a.name = name
 		
 		# Fix rotation:
@@ -482,9 +441,15 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 		file = None
 		
 		try:
-			file = BufferedFile(self.filepath)
+			file = open(self.filepath, 'rb')
 			
-			fileSize = file.FileSize()
+			if file is None:
+				self.error('Could not open file.')
+				return False
+			
+			file.seek(0, 2)
+			fileSize = file.tell()
+			file.seek(0, 0)
 			
 			context.window_manager.progress_begin(0.0, 1.0)
 			
@@ -494,7 +459,7 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 				self.error('Invalid file format.')
 				return False
 				
-			if 2 != version:
+			if 3 != version:
 				self.error('Version '+str(version)+' is not supported!')
 				return False
 				
@@ -502,6 +467,7 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 			timeConverter = AgrTimeConverter(context,self.adjustFps)
 			dict = AgrDictionary()
 			handleToLastModelHandle = {}
+			unusedModelHandles = []
 			lastCameraQuat = None
 			camData = None
 			
@@ -512,9 +478,9 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 			while True:
 			
 				if 0 < fileSize and 0 == stupidCount % 100:
-					val = float(file.Tell())/float(fileSize)
+					val = float(file.tell())/float(fileSize)
 					context.window_manager.progress_update(val)
-					print("%f " % (100*val))
+					print("AGR Import %f%%" % (100*val))
 				
 				stupidCount = stupidCount +1
 				
@@ -529,20 +495,40 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 				if node0 is None:
 					break
 					
-				elif 'afxHidden' == node0:
-					handle = ReadInt(file)
-					time = timeConverter.Convert(ReadFloat(file))
+				elif 'afxHiddenOffset' == node0:
+					offset = ReadInt(file)
+					if offset:
+						curOffset = file.tell()
+						file.seek(offset -4, 1)
+						
+						time = timeConverter.Convert(ReadFloat(file))
+						numHidden = ReadInt(file)
+						for i in range(numHidden):
+							handle = ReadInt(file)
+							
+							modelHandle = handleToLastModelHandle.pop(handle, None)
+							if modelHandle is not None:
+								# Make ent invisible:
+								modelData =  modelHandle.modelData
+								if modelData: # this can happen if the model could not be loaded
+									curves = modelData.curves
+									bpy.context.scene.objects.active = modelData.smd.a
+									curves[0].keyframe_points.add(1)
+									curves[0].keyframe_points[-1].co = [time, 1.0]
+									curves[0].keyframe_points[-1].interpolation = 'CONSTANT'
+								
+								unusedModelHandles.append(modelHandle)
+								print("Marking %i (%s) as hidden/reusable." % (modelHandle.objNr,modelHandle.modelName))
+							
+						file.seek(curOffset,0)
 					
-					modelHandle = handleToLastModelHandle.get(handle, None)
-					if modelHandle is not None:
-						# Make ent invisible:
-						modelData =  modelHandle.modelData
-						if modelData: # this can happen if the model could not be loaded
-							curves = modelData.curves
-							bpy.context.scene.objects.active = modelData.smd.a
-							curves[0].keyframe_points.add(1)
-							curves[0].keyframe_points[-1].co = [time, 1.0]
-							curves[0].keyframe_points[-1].interpolation = 'CONSTANT'
+				elif 'afxHidden' == node0:
+					# skipped, because will be handled earlier by afxHiddenOffset
+					
+					time = timeConverter.Convert(ReadFloat(file))
+					numHidden = ReadInt(file)
+					for i in range(numHidden):
+						handle = ReadInt(file)
 				
 				elif 'deleted' == node0:
 					handle = ReadInt(file)
@@ -558,6 +544,9 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 							curves[0].keyframe_points.add(1)
 							curves[0].keyframe_points[-1].co = [time, 1.0]
 							curves[0].keyframe_points[-1].interpolation = 'CONSTANT'
+							
+						unusedModelHandles.append(modelHandle)
+						print("Marking %i (%s) as deleted/reusable." % (modelHandle.objNr,modelHandle.modelName))
 				
 				elif 'entity_state' == node0:
 					visible = None
@@ -569,7 +558,13 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 						
 						modelName = dict.Read(file)
 						
-						visible = True #visible = ReadBool(file)
+						visible = ReadBool(file)
+						
+						renderOrigin = ReadVector(file, quakeFormat=True)
+						renderAngles = ReadQAngle(file)
+						
+						renderOrigin = renderOrigin * self.global_scale
+						renderRotQuat = renderAngles.to_quaternion()
 						
 						modelHandle = handleToLastModelHandle.get(handle, None)
 						
@@ -586,8 +581,28 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 							modelHandle = None
 						
 						if modelHandle is None:
-							objNr = objNr + 1
-							modelHandle = ModelHandle(objNr, handle, modelName)
+							
+							# Check if we can reuse s.th. and if not create new one:
+							
+							bestIndex = 0
+							bestLength = 0
+							
+							for idx,val in enumerate(unusedModelHandles):
+								if (val.modelName == modelName) and ((modelHandle is None) or (modelHandle.modelData and (modelHandle.modelData.lastRenderOrigin is not None) and ((modelHandle.modelData.lastRenderOrigin -renderOrigin).length < bestLength))):
+									modelHandle = val
+									bestLength = (modelHandle.modelData.lastRenderOrigin -renderOrigin).length
+									bestIndex = idx
+							
+							if modelHandle is not None:
+								# Use the one we found:
+								del unusedModelHandles[bestIndex]
+								print("Reusing %i (%s)." % (modelHandle.objNr,modelHandle.modelName))
+							else:
+								# If not then create a new one:
+								objNr = objNr + 1
+								modelHandle = ModelHandle(objNr, modelName)
+								print("Creating %i (%s)." % (modelHandle.objNr,modelHandle.modelName))
+							
 							handleToLastModelHandle[handle] = modelHandle
 						
 						modelData = modelHandle.modelData
@@ -596,13 +611,9 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 							modelData = self.importModel(context, modelHandle)
 							modelHandle.modelData = modelData
 						
-						renderOrigin = ReadVector(file, quakeFormat=True)
-						renderAngles = ReadQAngle(file)
-						
-						renderOrigin = renderOrigin * self.global_scale
-						renderRotQuat = renderAngles.to_quaternion()
-						
 						if modelData is not None:
+							
+							modelData.lastRenderOrigin = renderOrigin
 							
 							# make sure we take the shortest path:
 							if modelData.lastRenderRotQuat is not None:
@@ -773,6 +784,6 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 			
 		finally:
 			if file is not None:
-				file.Close()
+				file.close()
 		
 		return True
