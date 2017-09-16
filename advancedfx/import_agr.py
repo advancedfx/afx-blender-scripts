@@ -1,7 +1,7 @@
 # Copyright (c) advancedfx.org
 #
 # Last changes:
-# 2017-09-12 dominik.matrixstorm.com
+# 2017-09-16 dominik.matrixstorm.com
 #
 # First changes:
 # 2016-07-19 dominik.matrixstorm.com
@@ -188,14 +188,15 @@ class ModelData:
 	def __init__(self,smd):
 		self.smd = smd
 		self.curves = []
-		self.lastRenderOrigin = None
-		self.lastRenderRotQuat = None
 
 class ModelHandle:
 	def __init__(self,objNr,modelName):
 		self.objNr = objNr
 		self.modelName = modelName
 		self.modelData = False
+		self.lastRenderOrigin = None
+		self.lastRenderRotQuat = None
+	
 #	
 #	def __hash__(self):
 #		return hash((self.handle, self.modelName))
@@ -208,44 +209,33 @@ class CameraData:
 		self.o = o
 		self.c = c
 		self.curves = []
-		
-class AgrAdjustFps(bpy.types.Operator):
-	bl_idname = "advancedfx.agr_adjust_fps"
-	bl_label = "Adjust FPS?"
-	
-	fps = bpy.props.IntProperty(name="FPS",default=30)
-	
-	def execute(self, context):
-		if(self.doChangeFps):
-			context.scene.render.fps = self.fps
-		return {'FINISHED'}
-	
-	def invoke(self, context, event):
-		wm = context.window_manager
-		return wm.invoke_props_dialog(self)
 
 class AgrTimeConverter:
-	def __init__(self,context,autoAdjustFps):
-		self.firstTime = None
-		self.context = context
+	def __init__(self,context):
 		self.fps = context.scene.render.fps
-		self.autoAdjustFps = autoAdjustFps
+		self.time = 0
+		self.frameTime = 0
+		self.newTime = 0
+		self.errorCount = 0
+		self.maxError = None
 		
-	def Convert(self,time):
-		if self.firstTime is None:
-			self.firstTime = time
+	def Frame(self,frameTime):
+		self.time = self.newTime
+		self.frameTime = frameTime
 		
-		time = time -self.firstTime
-
-		if self.autoAdjustFps and (self.firstTime is not None) and (0 < time):
-			self.autoAdjustFps = False
-			self.fps = round(1.0 / time)
-			if(self.context.scene.render.fps != self.fps):
-				self.context.scene.render.fps = self.fps
+		if 0 != frameTime:
+			fps = 1.0/frameTime
+			error = self.fps -fps
+			if (0>= error) or (0.001 < error):
+				self.errorCount = self.errorCount + 1
+				if (self.maxError is None) or (abs(self.maxError) < abs(error)):
+					self.maxError = error
+					
+	def FrameEnd(self):
+		self.newTime = self.time + self.frameTime
 		
-		time = 1.0 + time * self.fps
-		
-		return time
+	def GetTime(self):
+		return 1.0 + self.time * self.fps
 
 class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 	bl_idname = "advancedfx.agr_importer"
@@ -271,12 +261,6 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 		min=0.000001, max=1000000.0,
 		soft_min=0.001, soft_max=1.0,
 		default=0.01,
-	)
-	
-	adjustFps = bpy.props.BoolProperty(
-		name="Adjust render FPS",
-		description="Try to auto adjust Blender scene render FPS based on first frame difference.",
-		default=True
 	)
 	
 	#visibleOnly = bpy.props.FloatProperty(
@@ -459,12 +443,11 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 				self.error('Invalid file format.')
 				return False
 				
-			if 3 != version:
+			if 4 != version:
 				self.error('Version '+str(version)+' is not supported!')
 				return False
 				
-			
-			timeConverter = AgrTimeConverter(context,self.adjustFps)
+			timeConverter = AgrTimeConverter(context)
 			dict = AgrDictionary()
 			handleToLastModelHandle = {}
 			unusedModelHandles = []
@@ -491,17 +474,19 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 				
 				node0 = dict.Read(file)
 				
-				
 				if node0 is None:
 					break
 					
-				elif 'afxHiddenOffset' == node0:
-					offset = ReadInt(file)
-					if offset:
+				elif 'afxFrame' == node0:
+					frameTime = ReadFloat(file)
+					
+					timeConverter.Frame(frameTime)
+					
+					afxHiddenOffset = ReadInt(file)
+					if afxHiddenOffset:
 						curOffset = file.tell()
-						file.seek(offset -4, 1)
+						file.seek(afxHiddenOffset -4, 1)
 						
-						time = timeConverter.Convert(ReadFloat(file))
 						numHidden = ReadInt(file)
 						for i in range(numHidden):
 							handle = ReadInt(file)
@@ -514,25 +499,26 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 									curves = modelData.curves
 									bpy.context.scene.objects.active = modelData.smd.a
 									curves[0].keyframe_points.add(1)
-									curves[0].keyframe_points[-1].co = [time, 1.0]
+									curves[0].keyframe_points[-1].co = [timeConverter.GetTime(), 1.0]
 									curves[0].keyframe_points[-1].interpolation = 'CONSTANT'
 								
 								unusedModelHandles.append(modelHandle)
 								print("Marking %i (%s) as hidden/reusable." % (modelHandle.objNr,modelHandle.modelName))
 							
 						file.seek(curOffset,0)
+						
+				elif 'afxFrameEnd' == node0:
+					timeConverter.FrameEnd()
 					
 				elif 'afxHidden' == node0:
 					# skipped, because will be handled earlier by afxHiddenOffset
 					
-					time = timeConverter.Convert(ReadFloat(file))
 					numHidden = ReadInt(file)
 					for i in range(numHidden):
 						handle = ReadInt(file)
 				
 				elif 'deleted' == node0:
 					handle = ReadInt(file)
-					time = timeConverter.Convert(ReadFloat(file))
 					
 					modelHandle = handleToLastModelHandle.pop(handle, None)
 					if modelHandle is not None:
@@ -542,7 +528,7 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 							curves = modelData.curves
 							bpy.context.scene.objects.active = modelData.smd.a
 							curves[0].keyframe_points.add(1)
-							curves[0].keyframe_points[-1].co = [time, 1.0]
+							curves[0].keyframe_points[-1].co = [timeConverter.GetTime(), 1.0]
 							curves[0].keyframe_points[-1].interpolation = 'CONSTANT'
 							
 						unusedModelHandles.append(modelHandle)
@@ -550,11 +536,9 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 				
 				elif 'entity_state' == node0:
 					visible = None
-					time = None
 					modelData = None
 					handle = ReadInt(file)
 					if dict.Peekaboo(file,'baseentity'):
-						time = timeConverter.Convert(ReadFloat(file))
 						
 						modelName = dict.Read(file)
 						
@@ -575,7 +559,7 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 								curves = modelData.curves
 								bpy.context.scene.objects.active = modelData.smd.a
 								curves[0].keyframe_points.add(1)
-								curves[0].keyframe_points[-1].co = [time, 1.0]
+								curves[0].keyframe_points[-1].co = [timeConverter.GetTime(), 1.0]
 								curves[0].keyframe_points[-1].interpolation = 'CONSTANT'
 							
 							modelHandle = None
@@ -588,9 +572,9 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 							bestLength = 0
 							
 							for idx,val in enumerate(unusedModelHandles):
-								if (val.modelName == modelName) and ((modelHandle is None) or (modelHandle.modelData and (modelHandle.modelData.lastRenderOrigin is not None) and ((modelHandle.modelData.lastRenderOrigin -renderOrigin).length < bestLength))):
+								if (val.modelName == modelName) and ((modelHandle is None) or ((modelHandle.lastRenderOrigin -renderOrigin).length < bestLength)):
 									modelHandle = val
-									bestLength = (modelHandle.modelData.lastRenderOrigin -renderOrigin).length
+									bestLength = (modelHandle.lastRenderOrigin -renderOrigin).length
 									bestIndex = idx
 							
 							if modelHandle is not None:
@@ -604,6 +588,15 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 								print("Creating %i (%s)." % (modelHandle.objNr,modelHandle.modelName))
 							
 							handleToLastModelHandle[handle] = modelHandle
+							
+						modelHandle.lastRenderOrigin = renderOrigin
+						
+						# make sure we take the shortest path:
+						if modelHandle.lastRenderRotQuat is not None:
+							dot = modelHandle.lastRenderRotQuat.dot(renderRotQuat)
+							if dot < 0:
+								renderRotQuat.negate()
+						modelHandle.lastRenderRotQuat = renderRotQuat
 						
 						modelData = modelHandle.modelData
 						if modelData is False:
@@ -613,43 +606,33 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 						
 						if modelData is not None:
 							
-							modelData.lastRenderOrigin = renderOrigin
-							
-							# make sure we take the shortest path:
-							if modelData.lastRenderRotQuat is not None:
-								dot = modelData.lastRenderRotQuat.dot(renderRotQuat)
-								if dot < 0:
-									renderRotQuat.negate()
-							modelData.lastRenderRotQuat = renderRotQuat
-							
-							
 							curves = modelData.curves
 							
 							bpy.context.scene.objects.active = modelData.smd.a
 							curves[0].keyframe_points.add(1)
-							curves[0].keyframe_points[-1].co = [time, 0.0 if visible else 1.0]
+							curves[0].keyframe_points[-1].co = [timeConverter.GetTime(), 0.0 if visible else 1.0]
 							curves[0].keyframe_points[-1].interpolation = 'CONSTANT'
 							
 							curves[1+0].keyframe_points.add(1)
-							curves[1+0].keyframe_points[-1].co = [time, renderOrigin.x]
-							curves[1+0].keyframe_points[-1].interpolation = 'LINEAR'
+							curves[1+0].keyframe_points[-1].co = [timeConverter.GetTime(), renderOrigin.x]
+							curves[1+0].keyframe_points[-1].interpolation = 'CONSTANT' # Since rotation can't be interpolated properly.
 							curves[1+1].keyframe_points.add(1)
-							curves[1+1].keyframe_points[-1].co = [time, renderOrigin.y]
-							curves[1+1].keyframe_points[-1].interpolation = 'LINEAR'
+							curves[1+1].keyframe_points[-1].co = [timeConverter.GetTime(), renderOrigin.y]
+							curves[1+1].keyframe_points[-1].interpolation = 'CONSTANT' # Since rotation can't be interpolated properly.
 							curves[1+2].keyframe_points.add(1)
-							curves[1+2].keyframe_points[-1].co = [time, renderOrigin.z]
-							curves[1+2].keyframe_points[-1].interpolation = 'LINEAR'
+							curves[1+2].keyframe_points[-1].co = [timeConverter.GetTime(), renderOrigin.z]
+							curves[1+2].keyframe_points[-1].interpolation = 'CONSTANT' # Since rotation can't be interpolated properly.
 							curves[1+3].keyframe_points.add(1)
-							curves[1+3].keyframe_points[-1].co = [time, renderRotQuat.w]
+							curves[1+3].keyframe_points[-1].co = [timeConverter.GetTime(), renderRotQuat.w]
 							curves[1+3].keyframe_points[-1].interpolation = 'CONSTANT' # Blender doesn't have proper interpolation for quaternion curves so far, so don't interpolate.
 							curves[1+4].keyframe_points.add(1)
-							curves[1+4].keyframe_points[-1].co = [time, renderRotQuat.x]
+							curves[1+4].keyframe_points[-1].co = [timeConverter.GetTime(), renderRotQuat.x]
 							curves[1+4].keyframe_points[-1].interpolation = 'CONSTANT' # Blender doesn't have proper interpolation for quaternion curves so far, so don't interpolate.
 							curves[1+5].keyframe_points.add(1)
-							curves[1+5].keyframe_points[-1].co = [time, renderRotQuat.y]
+							curves[1+5].keyframe_points[-1].co = [timeConverter.GetTime(), renderRotQuat.y]
 							curves[1+5].keyframe_points[-1].interpolation = 'CONSTANT' # Blender doesn't have proper interpolation for quaternion curves so far, so don't interpolate.
 							curves[1+6].keyframe_points.add(1)
-							curves[1+6].keyframe_points[-1].co = [time, renderRotQuat.z]
+							curves[1+6].keyframe_points[-1].co = [timeConverter.GetTime(), renderRotQuat.z]
 							curves[1+6].keyframe_points[-1].interpolation = 'CONSTANT' # Blender doesn't have proper interpolation for quaternion curves so far, so don't interpolate.
 					
 					if dict.Peekaboo(file,'baseanimating'):
@@ -689,25 +672,25 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 									
 									bpy.context.scene.objects.active = modelData.smd.a
 									curves[8+i*7+0].keyframe_points.add(1)
-									curves[8+i*7+0].keyframe_points[-1].co = [time, bone.location.x]
-									curves[8+i*7+0].keyframe_points[-1].interpolation = 'LINEAR'
+									curves[8+i*7+0].keyframe_points[-1].co = [timeConverter.GetTime(), bone.location.x]
+									curves[8+i*7+0].keyframe_points[-1].interpolation = 'CONSTANT' # Since rotation can't be interpolated properly.
 									curves[8+i*7+1].keyframe_points.add(1)
-									curves[8+i*7+1].keyframe_points[-1].co = [time, bone.location.y]
-									curves[8+i*7+1].keyframe_points[-1].interpolation = 'LINEAR'
+									curves[8+i*7+1].keyframe_points[-1].co = [timeConverter.GetTime(), bone.location.y]
+									curves[8+i*7+1].keyframe_points[-1].interpolation = 'CONSTANT' # Since rotation can't be interpolated properly.
 									curves[8+i*7+2].keyframe_points.add(1)
-									curves[8+i*7+2].keyframe_points[-1].co = [time, bone.location.z]
-									curves[8+i*7+2].keyframe_points[-1].interpolation = 'LINEAR'
+									curves[8+i*7+2].keyframe_points[-1].co = [timeConverter.GetTime(), bone.location.z]
+									curves[8+i*7+2].keyframe_points[-1].interpolation = 'CONSTANT' # Since rotation can't be interpolated properly.
 									curves[8+i*7+3].keyframe_points.add(1)
-									curves[8+i*7+3].keyframe_points[-1].co = [time, bone.rotation_quaternion.w]
+									curves[8+i*7+3].keyframe_points[-1].co = [timeConverter.GetTime(), bone.rotation_quaternion.w]
 									curves[8+i*7+3].keyframe_points[-1].interpolation = 'CONSTANT' # Blender doesn't have proper interpolation for quaternion curves so far, so don't interpolate.
 									curves[8+i*7+4].keyframe_points.add(1)
-									curves[8+i*7+4].keyframe_points[-1].co = [time, bone.rotation_quaternion.x]
+									curves[8+i*7+4].keyframe_points[-1].co = [timeConverter.GetTime(), bone.rotation_quaternion.x]
 									curves[8+i*7+4].keyframe_points[-1].interpolation = 'CONSTANT' # Blender doesn't have proper interpolation for quaternion curves so far, so don't interpolate.
 									curves[8+i*7+5].keyframe_points.add(1)
-									curves[8+i*7+5].keyframe_points[-1].co = [time, bone.rotation_quaternion.y]
+									curves[8+i*7+5].keyframe_points[-1].co = [timeConverter.GetTime(), bone.rotation_quaternion.y]
 									curves[8+i*7+5].keyframe_points[-1].interpolation = 'CONSTANT' # Blender doesn't have proper interpolation for quaternion curves so far, so don't interpolate.
 									curves[8+i*7+6].keyframe_points.add(1)
-									curves[8+i*7+6].keyframe_points[-1].co = [time, bone.rotation_quaternion.z]
+									curves[8+i*7+6].keyframe_points[-1].co = [timeConverter.GetTime(), bone.rotation_quaternion.z]
 									curves[8+i*7+6].keyframe_points[-1].interpolation = 'CONSTANT' # Blender doesn't have proper interpolation for quaternion curves so far, so don't interpolate.
 						
 					dict.Peekaboo(file,'/')
@@ -727,8 +710,6 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 							self.error("Failed to create camera.")
 							return False
 					
-					
-					time = timeConverter.Convert(ReadFloat(file))
 					
 					renderOrigin = ReadVector(file, quakeFormat=True)
 					renderAngles = ReadQAngle(file)
@@ -751,34 +732,38 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 					
 					bpy.context.scene.objects.active = camData.o
 					curves[0].keyframe_points.add(1)
-					curves[0].keyframe_points[-1].co = [time, renderOrigin.x]
-					curves[0].keyframe_points[-1].interpolation = 'LINEAR'
+					curves[0].keyframe_points[-1].co = [timeConverter.GetTime(), renderOrigin.x]
+					curves[0].keyframe_points[-1].interpolation = 'CONSTANT' # Since rotation can't be interpolated properly.
 					curves[1].keyframe_points.add(1)
-					curves[1].keyframe_points[-1].co = [time, renderOrigin.y]
-					curves[1].keyframe_points[-1].interpolation = 'LINEAR'
+					curves[1].keyframe_points[-1].co = [timeConverter.GetTime(), renderOrigin.y]
+					curves[1].keyframe_points[-1].interpolation = 'CONSTANT' # Since rotation can't be interpolated properly.
 					curves[2].keyframe_points.add(1)
-					curves[2].keyframe_points[-1].co = [time, renderOrigin.z]
-					curves[2].keyframe_points[-1].interpolation = 'LINEAR'
+					curves[2].keyframe_points[-1].co = [timeConverter.GetTime(), renderOrigin.z]
+					curves[2].keyframe_points[-1].interpolation = 'CONSTANT' # Since rotation can't be interpolated properly.
 					curves[3].keyframe_points.add(1)
-					curves[3].keyframe_points[-1].co = [time, renderRotQuat.w]
-					curves[3].keyframe_points[-1].interpolation = 'LINEAR'
+					curves[3].keyframe_points[-1].co = [timeConverter.GetTime(), renderRotQuat.w]
+					curves[3].keyframe_points[-1].interpolation = 'CONSTANT' # Blender doesn't have proper interpolation for quaternion curves so far, so don't interpolate.
 					curves[4].keyframe_points.add(1)
-					curves[4].keyframe_points[-1].co = [time, renderRotQuat.x]
-					curves[4].keyframe_points[-1].interpolation = 'LINEAR'
+					curves[4].keyframe_points[-1].co = [timeConverter.GetTime(), renderRotQuat.x]
+					curves[4].keyframe_points[-1].interpolation = 'CONSTANT' # Blender doesn't have proper interpolation for quaternion curves so far, so don't interpolate.
 					curves[5].keyframe_points.add(1)
-					curves[5].keyframe_points[-1].co = [time, renderRotQuat.y]
-					curves[5].keyframe_points[-1].interpolation = 'LINEAR'
+					curves[5].keyframe_points[-1].co = [timeConverter.GetTime(), renderRotQuat.y]
+					curves[5].keyframe_points[-1].interpolation = 'CONSTANT' # Blender doesn't have proper interpolation for quaternion curves so far, so don't interpolate.
 					curves[6].keyframe_points.add(1)
-					curves[6].keyframe_points[-1].co = [time, renderRotQuat.z]
-					curves[6].keyframe_points[-1].interpolation = 'LINEAR'
+					curves[6].keyframe_points[-1].co = [timeConverter.GetTime(), renderRotQuat.z]
+					curves[6].keyframe_points[-1].interpolation = 'CONSTANT' # Blender doesn't have proper interpolation for quaternion curves so far, so don't interpolate.
 					
 					curves[7].keyframe_points.add(1)
-					curves[7].keyframe_points[-1].co = [time, lens]
-					curves[7].keyframe_points[-1].interpolation = 'LINEAR'
+					curves[7].keyframe_points[-1].co = [timeConverter.GetTime(), lens]
+					curves[7].keyframe_points[-1].interpolation = 'CONSTANT' # Since other stuff is not interpolated anyways.
 				
 				else:
 					self.warning('Unknown packet at '+str(file.tell()))
 					return False
+					
+			
+			if 0 < timeConverter.errorCount:
+				self.warning("FPS mismatch was detected %i times. The maximum error was %f. Solution: Make sure to set the Blender project FPS correctly before importing." % (timeConverter.errorCount, timeConverter.maxError))
 			
 			context.window_manager.progress_end()
 			

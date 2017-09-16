@@ -38,6 +38,9 @@ Blender doesn't support proper interpolation of curves for quaternions yet.
 
 Changelog:
 
+1.4.0 (2017-09-16T22:00Z):
+- Updated HLAE AGR Import to agr version 4 (also bug fixes)
+
 1.3.0 (2017-09-12T12:00Z):
 - Updated HLAE AGR Import to agr version 3
 
