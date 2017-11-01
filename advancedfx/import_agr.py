@@ -1,7 +1,7 @@
 # Copyright (c) advancedfx.org
 #
 # Last changes:
-# 2017-09-16 dominik.matrixstorm.com
+# 2017-11-01 dominik.matrixstorm.com
 #
 # First changes:
 # 2016-07-19 dominik.matrixstorm.com
@@ -299,7 +299,8 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 	
 	def importModel(self, context, modelHandle):
 		filePath = self.assetPath.rstrip("/\\") + "/" +modelHandle.modelName
-		filePath = os.path.splitext(filePath)[0] + ".qc"
+		filePath = os.path.splitext(filePath)[0]
+		filePath = filePath + "/" + os.path.basename(filePath) + ".qc"
 		
 		GAgrImporter.smd = None
 		modelData = None

@@ -11,7 +11,9 @@ afx-blender-scripts is installed like the Blender Source Tools are.
 
 Of course when using AGR import you need the decompiled(player) models
 in a folder structure like it is in CS:GO's pak01_dir.pak
-(We recommend http://steamcommunity.com/groups/CrowbarTool ).
+We recommend Crowbar ( http://steamcommunity.com/groups/CrowbarTool )
+and YOU NEED TO TICK THE "Folder for each model" option in the Decompile
+options!
 
 
 
@@ -29,6 +31,9 @@ The scripts can be accessed through the entries in the import menu
 
 Don't forget to enter the "Asset Path" when using AGR import, it needs to be
 the full path to the folder structure with the decompiled models.
+We recommend using Crowbar ( http://steamcommunity.com/groups/CrowbarTool )
+and YOU NEED TO TICK THE "Folder for each model" option in the Decompile
+options!
 
 Notice:
 The interpolation of the curves for the rotations are set to CONSTANT, because
@@ -37,6 +42,11 @@ Blender doesn't support proper interpolation of curves for quaternions yet.
 
 
 Changelog:
+
+1.4.1 (2017-11-01T18:53Z):
+- Updated HLAE AGR Import: Now will only work with the "Folder for each model"
+  Option in Crowbar. This is important to avoid naming collissions that can occur.
+  In return this also works with the newest Crowbar version (currently 0.49.0).
 
 1.4.0 (2017-09-16T22:00Z):
 - Updated HLAE AGR Import to agr version 4 (also bug fixes)
