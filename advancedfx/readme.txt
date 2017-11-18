@@ -43,6 +43,14 @@ Blender doesn't support proper interpolation of curves for quaternions yet.
 
 Changelog:
 
+1.4.2 (2017-11-18T20:00Z):
+- Updated HLAE AGR Import: Added option "Scale invisible to zero"
+  to scale entities to 0 upon hide_render (might be useful for FBX export).
+  This option creates drivers and modifiers on each entity,
+  so no extra animation data.
+  Please don't be scared if at frame 0 (default) everything is scaled to
+  zero (not visible), this is because the animations start at frame 1.
+
 1.4.1 (2017-11-01T18:53Z):
 - Updated HLAE AGR Import: Now will only work with the "Folder for each model"
   Option in Crowbar. This is important to avoid naming collissions that can occur.

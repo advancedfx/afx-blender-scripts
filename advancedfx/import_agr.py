@@ -1,7 +1,7 @@
 # Copyright (c) advancedfx.org
 #
 # Last changes:
-# 2017-11-01 dominik.matrixstorm.com
+# 2017-11-18 dominik.matrixstorm.com
 #
 # First changes:
 # 2016-07-19 dominik.matrixstorm.com
@@ -248,6 +248,7 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 	filter_glob = bpy.props.StringProperty(default="*.agr", options={'HIDDEN'})
 
 	# Custom properties
+	
 	assetPath = bpy.props.StringProperty(
 		name="Asset Path",
 		description="Directory path containing the (decompiled) assets in a folder structure as in the pak01_dir.pak.",
@@ -263,11 +264,11 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 		default=0.01,
 	)
 	
-	#visibleOnly = bpy.props.FloatProperty(
-	#	name="Visible Only",
-	#	description="If set entities will only be created and keyframed when visible.",
-	#	default=True,
-	#)
+	scaleInvisibleZero = bpy.props.BoolProperty(
+		name="Scale invisible to zero",
+		description="If set entities will scaled to zero when not visible.",
+		default=False,
+	)
 	
 	# class properties
 	valveMatrixToBlender = mathutils.Matrix.Rotation(math.pi/2,4,'Z')
@@ -379,6 +380,25 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 			v.name = 'hide_render'
 			v.targets[0].id = a
 			v.targets[0].data_path = 'hide_render'
+			
+		if self.scaleInvisibleZero:
+			
+			ds = a.driver_add('scale')
+			
+			for df in ds:
+				d = df.driver
+				d.type = 'AVERAGE'
+				v = d.variables.new()
+				v.name = 'hide_render'
+				v.targets[0].id = a
+				v.targets[0].data_path = 'hide_render'
+				m = df.modifiers.new('GENERATOR')
+				m.coefficients[0] = self.global_scale
+				m.coefficients[1] = -self.global_scale
+				m.poly_order = 1
+				m.mode = 'POLYNOMIAL'
+				m.use_additive = False
+				
 		
 		return modelData
 		
