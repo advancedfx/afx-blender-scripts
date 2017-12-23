@@ -43,6 +43,13 @@ Blender doesn't support proper interpolation of curves for quaternions yet.
 
 Changelog:
 
+1.4.3 (2017-12-23T21:14Z):
+- Updated HLAE AGR Import:
+  Added option "Preserve SMD Polygons & Normals":
+  Import raw (faster), disconnected polygons from SMD files;
+  these are harder to edit but a closer match to the original mesh.
+  (Enabled by default, much less time spent on importing models now.)
+
 1.4.2 (2017-11-18T20:00Z):
 - Updated HLAE AGR Import: Added option "Scale invisible to zero"
   to scale entities to 0 upon hide_render (might be useful for FBX export).

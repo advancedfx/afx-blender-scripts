@@ -1,7 +1,7 @@
 # Copyright (c) advancedfx.org
 #
 # Last changes:
-# 2017-11-18 dominik.matrixstorm.com
+# 2017-12-23 dominik.matrixstorm.com
 #
 # First changes:
 # 2016-07-19 dominik.matrixstorm.com
@@ -270,6 +270,11 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 		default=False,
 	)
 	
+	skipRemDoubles = bpy.props.BoolProperty(
+		name="Preserve SMD Polygons & Normals",
+		description="Import raw (faster), disconnected polygons from SMD files; these are harder to edit but a closer match to the original mesh",
+		default=True)
+	
 	# class properties
 	valveMatrixToBlender = mathutils.Matrix.Rotation(math.pi/2,4,'Z')
 	blenderCamUpQuat = mathutils.Quaternion((math.cos(0.5 * math.radians(90.0)), math.sin(0.5* math.radians(90.0)), 0.0, 0.0))
@@ -308,7 +313,7 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 		
 		try:
 			#bpy.ops.import_scene.smd(filepath=filePath,files=[],doAnim=False)
-			bpy.ops.advancedfx.smd_importer_ex(filepath=filePath, doAnim=False)
+			bpy.ops.advancedfx.smd_importer_ex(filepath=filePath, doAnim=False, skipRemDoubles=self.skipRemDoubles)
 			modelData = ModelData(GAgrImporter.smd)
 		except:
 			self.error("Failed to import \""+filePath+"\".")
@@ -665,6 +670,7 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 							numBones = ReadInt(file)
 							
 							for i in range(numBones):
+								#pos = file.tell()
 								vec = ReadVector(file, quakeFormat=False)
 								quat = ReadQuaternion(file, quakeFormat=False)
 								
@@ -678,7 +684,7 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 								if(i < len(modelData.smd.boneIDs)):
 									bone = modelData.smd.a.pose.bones[modelData.smd.boneIDs[i]]
 									
-									# self.warning(str(i)+"("+bone.name+"): "+str(quat))
+									#self.warning(str(pos)+": "+str(i)+"("+bone.name+"): "+str(vec)+" "+str(quat))
 									
 									matrix = mathutils.Matrix.Translation(vec) * quat.to_matrix().to_4x4()
 									
