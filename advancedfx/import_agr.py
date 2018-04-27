@@ -1,7 +1,7 @@
 # Copyright (c) advancedfx.org
 #
 # Last changes:
-# 2017-12-23 dominik.matrixstorm.com
+# 2018-04-26 dominik.matrixstorm.com
 #
 # First changes:
 # 2016-07-19 dominik.matrixstorm.com
@@ -16,7 +16,7 @@ import mathutils
 
 from io_scene_valvesource import import_smd as vs_import_smd, utils as vs_utils
 
-from .utils import QAngle
+from advancedfx import utils as afx_utils
 
 class GAgrImporter:
 	smd = None
@@ -113,7 +113,7 @@ def ReadQAngle(file):
 		y = 0
 		z = 0
 	
-	return QAngle(x,y,z)
+	return afx_utils.QAngle(x,y,z)
 
 def ReadQuaternion(file, quakeFormat = False):
 	x = ReadFloat(file)
@@ -256,6 +256,11 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 		#subtype = 'DIR_PATH'
 	)
 
+	interKey = bpy.props.BoolProperty(
+		name="Add interpolated key frames",
+		description="Create interpolated key frames for frames in-between the original key frames.",
+		default=False)
+
 	global_scale = bpy.props.FloatProperty(
 		name="Scale",
 		description="Scale everything by this value",
@@ -353,9 +358,7 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 		modelData.curves.append(action.fcurves.new("hide_render"))
 		
 		# We are lazy, so we use frame 0 to set as not visible (initially) / hide_render 1:
-		modelData.curves[0].keyframe_points.add(1)
-		modelData.curves[0].keyframe_points[-1].co = [0.0, 1.0]
-		modelData.curves[0].keyframe_points[-1].interpolation = 'CONSTANT'
+		afx_utils.AddKey_Visible(self.interKey, modelData.curves[0].keyframe_points, 0.0, False)
 		
 		for i in range(3):
 			modelData.curves.append(action.fcurves.new("location",index = i))
@@ -524,9 +527,7 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 								if modelData: # this can happen if the model could not be loaded
 									curves = modelData.curves
 									bpy.context.scene.objects.active = modelData.smd.a
-									curves[0].keyframe_points.add(1)
-									curves[0].keyframe_points[-1].co = [timeConverter.GetTime(), 1.0]
-									curves[0].keyframe_points[-1].interpolation = 'CONSTANT'
+									afx_utils.AddKey_Visible(self.interKey, curves[0].keyframe_points, timeConverter.GetTime(), False)
 								
 								unusedModelHandles.append(modelHandle)
 								print("Marking %i (%s) as hidden/reusable." % (modelHandle.objNr,modelHandle.modelName))
@@ -553,10 +554,8 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 						if modelData: # this can happen if the model could not be loaded
 							curves = modelData.curves
 							bpy.context.scene.objects.active = modelData.smd.a
-							curves[0].keyframe_points.add(1)
-							curves[0].keyframe_points[-1].co = [timeConverter.GetTime(), 1.0]
-							curves[0].keyframe_points[-1].interpolation = 'CONSTANT'
-							
+							afx_utils.AddKey_Visible(self.interKey, curves[0].keyframe_points, timeConverter.GetTime(), False)
+						
 						unusedModelHandles.append(modelHandle)
 						print("Marking %i (%s) as deleted/reusable." % (modelHandle.objNr,modelHandle.modelName))
 				
@@ -584,9 +583,7 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 							if modelData: # this can happen if the model could not be loaded
 								curves = modelData.curves
 								bpy.context.scene.objects.active = modelData.smd.a
-								curves[0].keyframe_points.add(1)
-								curves[0].keyframe_points[-1].co = [timeConverter.GetTime(), 1.0]
-								curves[0].keyframe_points[-1].interpolation = 'CONSTANT'
+								afx_utils.AddKey_Visible(self.interKey, curves[0].keyframe_points, timeConverter.GetTime(), False)
 							
 							modelHandle = None
 						
@@ -635,31 +632,12 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 							curves = modelData.curves
 							
 							bpy.context.scene.objects.active = modelData.smd.a
-							curves[0].keyframe_points.add(1)
-							curves[0].keyframe_points[-1].co = [timeConverter.GetTime(), 0.0 if visible else 1.0]
-							curves[0].keyframe_points[-1].interpolation = 'CONSTANT'
 							
-							curves[1+0].keyframe_points.add(1)
-							curves[1+0].keyframe_points[-1].co = [timeConverter.GetTime(), renderOrigin.x]
-							curves[1+0].keyframe_points[-1].interpolation = 'CONSTANT' # Since rotation can't be interpolated properly.
-							curves[1+1].keyframe_points.add(1)
-							curves[1+1].keyframe_points[-1].co = [timeConverter.GetTime(), renderOrigin.y]
-							curves[1+1].keyframe_points[-1].interpolation = 'CONSTANT' # Since rotation can't be interpolated properly.
-							curves[1+2].keyframe_points.add(1)
-							curves[1+2].keyframe_points[-1].co = [timeConverter.GetTime(), renderOrigin.z]
-							curves[1+2].keyframe_points[-1].interpolation = 'CONSTANT' # Since rotation can't be interpolated properly.
-							curves[1+3].keyframe_points.add(1)
-							curves[1+3].keyframe_points[-1].co = [timeConverter.GetTime(), renderRotQuat.w]
-							curves[1+3].keyframe_points[-1].interpolation = 'CONSTANT' # Blender doesn't have proper interpolation for quaternion curves so far, so don't interpolate.
-							curves[1+4].keyframe_points.add(1)
-							curves[1+4].keyframe_points[-1].co = [timeConverter.GetTime(), renderRotQuat.x]
-							curves[1+4].keyframe_points[-1].interpolation = 'CONSTANT' # Blender doesn't have proper interpolation for quaternion curves so far, so don't interpolate.
-							curves[1+5].keyframe_points.add(1)
-							curves[1+5].keyframe_points[-1].co = [timeConverter.GetTime(), renderRotQuat.y]
-							curves[1+5].keyframe_points[-1].interpolation = 'CONSTANT' # Blender doesn't have proper interpolation for quaternion curves so far, so don't interpolate.
-							curves[1+6].keyframe_points.add(1)
-							curves[1+6].keyframe_points[-1].co = [timeConverter.GetTime(), renderRotQuat.z]
-							curves[1+6].keyframe_points[-1].interpolation = 'CONSTANT' # Blender doesn't have proper interpolation for quaternion curves so far, so don't interpolate.
+							afx_utils.AddKey_Visible(self.interKey, curves[0].keyframe_points, timeConverter.GetTime(), visible)
+							
+							afx_utils.AddKey_Location(self.interKey, curves[1+0].keyframe_points, curves[1+1].keyframe_points, curves[1+2].keyframe_points, timeConverter.GetTime(), renderOrigin)
+							
+							afx_utils.AddKey_Rotation(self.interKey, curves[1+3].keyframe_points, curves[1+4].keyframe_points, curves[1+5].keyframe_points, curves[1+6].keyframe_points, timeConverter.GetTime(), renderRotQuat)
 					
 					if dict.Peekaboo(file,'baseanimating'):
 						#skin = ReadInt(file)
@@ -698,28 +676,11 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 									curves = modelData.curves
 									
 									bpy.context.scene.objects.active = modelData.smd.a
-									curves[8+i*7+0].keyframe_points.add(1)
-									curves[8+i*7+0].keyframe_points[-1].co = [timeConverter.GetTime(), bone.location.x]
-									curves[8+i*7+0].keyframe_points[-1].interpolation = 'CONSTANT' # Since rotation can't be interpolated properly.
-									curves[8+i*7+1].keyframe_points.add(1)
-									curves[8+i*7+1].keyframe_points[-1].co = [timeConverter.GetTime(), bone.location.y]
-									curves[8+i*7+1].keyframe_points[-1].interpolation = 'CONSTANT' # Since rotation can't be interpolated properly.
-									curves[8+i*7+2].keyframe_points.add(1)
-									curves[8+i*7+2].keyframe_points[-1].co = [timeConverter.GetTime(), bone.location.z]
-									curves[8+i*7+2].keyframe_points[-1].interpolation = 'CONSTANT' # Since rotation can't be interpolated properly.
-									curves[8+i*7+3].keyframe_points.add(1)
-									curves[8+i*7+3].keyframe_points[-1].co = [timeConverter.GetTime(), bone.rotation_quaternion.w]
-									curves[8+i*7+3].keyframe_points[-1].interpolation = 'CONSTANT' # Blender doesn't have proper interpolation for quaternion curves so far, so don't interpolate.
-									curves[8+i*7+4].keyframe_points.add(1)
-									curves[8+i*7+4].keyframe_points[-1].co = [timeConverter.GetTime(), bone.rotation_quaternion.x]
-									curves[8+i*7+4].keyframe_points[-1].interpolation = 'CONSTANT' # Blender doesn't have proper interpolation for quaternion curves so far, so don't interpolate.
-									curves[8+i*7+5].keyframe_points.add(1)
-									curves[8+i*7+5].keyframe_points[-1].co = [timeConverter.GetTime(), bone.rotation_quaternion.y]
-									curves[8+i*7+5].keyframe_points[-1].interpolation = 'CONSTANT' # Blender doesn't have proper interpolation for quaternion curves so far, so don't interpolate.
-									curves[8+i*7+6].keyframe_points.add(1)
-									curves[8+i*7+6].keyframe_points[-1].co = [timeConverter.GetTime(), bone.rotation_quaternion.z]
-									curves[8+i*7+6].keyframe_points[-1].interpolation = 'CONSTANT' # Blender doesn't have proper interpolation for quaternion curves so far, so don't interpolate.
-						
+									
+									afx_utils.AddKey_Location(self.interKey, curves[8+i*7+0].keyframe_points, curves[8+i*7+1].keyframe_points, curves[8+i*7+2].keyframe_points, timeConverter.GetTime(), bone.location)
+									
+									afx_utils.AddKey_Rotation(self.interKey, curves[8+i*7+3].keyframe_points, curves[8+i*7+4].keyframe_points, curves[8+i*7+5].keyframe_points, curves[8+i*7+6].keyframe_points, timeConverter.GetTime(), bone.rotation_quaternion)
+					
 					dict.Peekaboo(file,'/')
 					
 					viewModel = ReadBool(file)
@@ -758,31 +719,12 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 					curves = camData.curves
 					
 					bpy.context.scene.objects.active = camData.o
-					curves[0].keyframe_points.add(1)
-					curves[0].keyframe_points[-1].co = [timeConverter.GetTime(), renderOrigin.x]
-					curves[0].keyframe_points[-1].interpolation = 'CONSTANT' # Since rotation can't be interpolated properly.
-					curves[1].keyframe_points.add(1)
-					curves[1].keyframe_points[-1].co = [timeConverter.GetTime(), renderOrigin.y]
-					curves[1].keyframe_points[-1].interpolation = 'CONSTANT' # Since rotation can't be interpolated properly.
-					curves[2].keyframe_points.add(1)
-					curves[2].keyframe_points[-1].co = [timeConverter.GetTime(), renderOrigin.z]
-					curves[2].keyframe_points[-1].interpolation = 'CONSTANT' # Since rotation can't be interpolated properly.
-					curves[3].keyframe_points.add(1)
-					curves[3].keyframe_points[-1].co = [timeConverter.GetTime(), renderRotQuat.w]
-					curves[3].keyframe_points[-1].interpolation = 'CONSTANT' # Blender doesn't have proper interpolation for quaternion curves so far, so don't interpolate.
-					curves[4].keyframe_points.add(1)
-					curves[4].keyframe_points[-1].co = [timeConverter.GetTime(), renderRotQuat.x]
-					curves[4].keyframe_points[-1].interpolation = 'CONSTANT' # Blender doesn't have proper interpolation for quaternion curves so far, so don't interpolate.
-					curves[5].keyframe_points.add(1)
-					curves[5].keyframe_points[-1].co = [timeConverter.GetTime(), renderRotQuat.y]
-					curves[5].keyframe_points[-1].interpolation = 'CONSTANT' # Blender doesn't have proper interpolation for quaternion curves so far, so don't interpolate.
-					curves[6].keyframe_points.add(1)
-					curves[6].keyframe_points[-1].co = [timeConverter.GetTime(), renderRotQuat.z]
-					curves[6].keyframe_points[-1].interpolation = 'CONSTANT' # Blender doesn't have proper interpolation for quaternion curves so far, so don't interpolate.
 					
-					curves[7].keyframe_points.add(1)
-					curves[7].keyframe_points[-1].co = [timeConverter.GetTime(), lens]
-					curves[7].keyframe_points[-1].interpolation = 'CONSTANT' # Since other stuff is not interpolated anyways.
+					afx_utils.AddKey_Location(self.interKey, curves[0].keyframe_points, curves[1].keyframe_points, curves[2].keyframe_points, timeConverter.GetTime(), renderOrigin)
+					
+					afx_utils.AddKey_Rotation(self.interKey, curves[3].keyframe_points, curves[4].keyframe_points, curves[5].keyframe_points, curves[6].keyframe_points, timeConverter.GetTime(), renderRotQuat)
+
+					afx_utils.AddKey_Value(self.interKey, curves[7].keyframe_points, timeConverter.GetTime(), lens)
 				
 				else:
 					self.warning('Unknown packet at '+str(file.tell()))

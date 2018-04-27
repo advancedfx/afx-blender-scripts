@@ -2,7 +2,7 @@ Installation:
 
 You need to install Blender Source Tools first
 ( http://steamreview.org/BlenderSourceTools/ ), since we depend on it.
-This version of afx-blender-scripts was built using Blender Source Tools 2.7.1.
+This version of afx-blender-scripts was built using Blender Source Tools 2.10.2.
 
 If you have a previous version of afx-blender-scripts installed, uninstall
 it first through Blender!
@@ -26,8 +26,19 @@ entry not to function anymore until you restart Blender!
 
 Usage:
 
-The scripts can be accessed through the entries in the import menu
-(AGR and BVH import) and export menu (BVH export).
+Always make sure to select the correct render properties in your project first
+(FPS, resolution).
+
+The scripts can be accessed through entries in the import menu and export menu.
+
+"Add interpolated key frames" option:
+Default is off (disabled).
+This creates interpolated key frames for Blender frames in-between the original
+key frames. This is useful in case your Blender project FPS doesn't match your
+recorded FPS, because interpolation is set to constant between all keyframes
+(see notice bellow for reason).
+Of course this will add more data and take longer if that's the case when you
+enable it.
 
 Don't forget to enter the "Asset Path" when using AGR import, it needs to be
 the full path to the folder structure with the decompiled models.
@@ -36,12 +47,28 @@ and YOU NEED TO TICK THE "Folder for each model" option in the Decompile
 options!
 
 Notice:
-The interpolation of the curves for the rotations are set to CONSTANT, because
+The interpolation is set to CONSTANT for everything, because
 Blender doesn't support proper interpolation of curves for quaternions yet.
 
 
 
 Changelog:
+
+1.5.0 (2018-04-27T17:11Z):
+- Added HLAE Camera IO (.cam) import
+- Added HLAE Camera IO (.cam) export
+- Update HLAE AGR Import:
+  - Added option "Add interpolated key frames" (default off)
+- Updated HLAE BVH Import:
+  - Renamed to HLAE old Cam IO (.bvh) import
+  - Added option "Add interpolated key frames" (default off)
+  - Bug fixes
+- Updated HLAE BVH Export:
+  - Renamed to HLAE old Cam IO (.bvh) export
+  - Bug fixes
+- Tested with Blender Source Tools 2.10.2
+- Please see updated usage note above regarding
+  "Add interpolated key frames"
 
 1.4.3 (2017-12-23T21:14Z):
 - Updated HLAE AGR Import:

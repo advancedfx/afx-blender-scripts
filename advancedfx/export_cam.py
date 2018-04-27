@@ -4,7 +4,7 @@
 # 2018-04-27 dominik.matrixstorm.com
 #
 # First changes:
-# 2009-09-03 dominik.matrixstorm.com
+# 2018-04-28 dominik.matrixstorm.com
 
 import gc
 import math
@@ -16,36 +16,27 @@ import mathutils
 
 from io_scene_valvesource import utils as vs_utils
 
-from .utils import QAngle
-
 # <summary> Formats a float value to be suitable for bvh output </summary>
 def FloatToBvhString(value):
 	return "{0:f}".format(value)
 
 def WriteHeader(file, frames, frameTime):
-	file.write("HIERARCHY\n")
-	file.write("ROOT MdtCam\n")
-	file.write("{\n")
-	file.write("\tOFFSET 0.00 0.00 0.00\n")
-	file.write("\tCHANNELS 6 Xposition Yposition Zposition Zrotation Xrotation Yrotation\n")
-	file.write("\tEnd Site\n")
-	file.write("\t{\n")
-	file.write("\t\tOFFSET 0.00 0.00 -1.00\n")
-	file.write("\t}\n")
-	file.write("}\n")
-	file.write("MOTION\n")
-	file.write("Frames: "+str(frames)+"\n")
-	file.write("Frame Time: "+FloatToBvhString(frameTime)+"\n")
-	
-class BvhExporter(bpy.types.Operator, vs_utils.Logger):
-	bl_idname = "advancedfx.bvh_exporter"
-	bl_label = "HLAE old Cam IO (.bvh)"
+	file.write("advancedfx Cam\n")
+	file.write("version 1\n")
+	file.write("scaleFov none\n")
+	file.write("channels time xPosition yPosition zPositon xRotation yRotation zRotation fov\n")
+	file.write("DATA\n")
+
+
+class CamExporter(bpy.types.Operator, vs_utils.Logger):
+	bl_idname = "advancedfx.cam_exporter"
+	bl_label = "HLAE Camera IO (.cam)"
 	bl_options = {'UNDO'}
 	
 	# Properties used by the file browser
 	filepath = bpy.props.StringProperty(subtype="FILE_PATH")
-	filename_ext = ".bvh"
-	filter_glob = bpy.props.StringProperty(default="*.bvh", options={'HIDDEN'})
+	filename_ext = ".cam"
+	filter_glob = bpy.props.StringProperty(default="*.cam", options={'HIDDEN'})
 
 	# Custom properties
 	global_scale = bpy.props.FloatProperty(
@@ -90,13 +81,20 @@ class BvhExporter(bpy.types.Operator, vs_utils.Logger):
 		
 		obj = context.scene.objects.active
 		
-		if obj is None:
-			self.error("No object selected.")
+		if (obj is None) or (obj.type != 'CAMERA'):
+			self.error("No camera selected.")
 			return False
+			
+		cam = None
+		
+		for i in range(len(bpy.data.cameras)):
+			if bpy.data.cameras[i].name == obj.name:
+				cam = bpy.data.cameras[i]
+				break
 		
 		lastRot = None
 		
-		unRot = mathutils.Matrix.Rotation(math.radians(-90.0 if "CAMERA" == obj.type else 0.0), 4, 'X')
+		unRot = mathutils.Matrix.Rotation(math.radians(-90.0), 4, 'X')
 		
 		file = None
 		
@@ -121,19 +119,14 @@ class BvhExporter(bpy.types.Operator, vs_utils.Logger):
 				rot = mat.to_euler('YXZ') if lastRot is None else mat.to_euler('YXZ', lastRot)
 				lastRot = rot
 				
-				loc = mathutils.Vector((loc[1],-loc[0],loc[2]))
+				loc = self.global_scale * mathutils.Vector((loc[1],-loc[0],loc[2]))
 				
-				X = -loc[1] * self.global_scale
-				Y =  loc[2] * self.global_scale
-				Z = -loc[0] * self.global_scale
+				qAngleVec = mathutils.Vector((math.degrees(rot[1]),-math.degrees(rot[0]),math.degrees(rot[2])))
 				
-				qAngleVec = mathutils.Vector((rot[1],-rot[0],rot[2]))
+				# lens = camData.c.sensor_width / (2.0 * math.tan(math.radians(fov) / 2.0))
+				fov = math.degrees(2.0 * math.atan((cam.sensor_width / cam.lens) / 2.0))
 				
-				ZR = -math.degrees(qAngleVec[2])
-				XR = -math.degrees(qAngleVec[0])
-				YR = math.degrees(qAngleVec[1])
-				
-				S = "" +FloatToBvhString(X) +" " +FloatToBvhString(Y) +" " +FloatToBvhString(Z) +" " +FloatToBvhString(ZR) +" " +FloatToBvhString(XR) +" " +FloatToBvhString(YR) + "\n"
+				S = ""+FloatToBvhString((frame-1) * frameTime) +" " +FloatToBvhString(loc[0]) +" " +FloatToBvhString(loc[1]) +" " +FloatToBvhString(loc[2]) +" " +FloatToBvhString(qAngleVec[0]) +" " +FloatToBvhString(qAngleVec[1]) +" " +FloatToBvhString(qAngleVec[2]) +" " +FloatToBvhString(fov) + "\n"
 				file.write(S)
 			
 		finally:

@@ -1,7 +1,7 @@
 # Copyright (c) advancedfx.org
 #
 # Last changes:
-# 2016-08-09 dominik.matrixstorm.com
+# 2018-04-26 dominik.matrixstorm.com
 #
 # First changes:
 # 2009-09-01 dominik.matrixstorm.com
@@ -16,7 +16,7 @@ import mathutils
 
 from io_scene_valvesource import utils as vs_utils
 
-from .utils import QAngle
+from advancedfx import utils as afx_utils
 
 # <summary> reads a line from file and separates it into words by splitting whitespace </summary>
 # <param name="file"> file to read from </param>
@@ -133,7 +133,7 @@ class CameraData:
 
 class BvhImporter(bpy.types.Operator, vs_utils.Logger):
 	bl_idname = "advancedfx.bvh_importer"
-	bl_label = "HLAE camera motion data (.bvh)"
+	bl_label = "HLAE old Cam IO (.bvh)"
 	bl_options = {'UNDO'}
 	
 	# Properties used by the file browser
@@ -142,6 +142,12 @@ class BvhImporter(bpy.types.Operator, vs_utils.Logger):
 	filter_glob = bpy.props.StringProperty(default="*.bvh", options={'HIDDEN'})
 
 	# Custom properties
+	
+	interKey = bpy.props.BoolProperty(
+		name="Add interpolated key frames",
+		description="Create interpolated key frames for frames in-between the original key frames.",
+		default=False)
+	
 	global_scale = bpy.props.FloatProperty(
 		name="Scale",
 		description="Scale everything by this value",
@@ -308,17 +314,9 @@ class BvhImporter(bpy.types.Operator, vs_utils.Logger):
 				
 				curves = camData.curves
 				
-				curves[0+0].keyframe_points.add(1)
-				curves[0+0].keyframe_points[-1].co = [time, renderOrigin.x]
-				curves[0+0].keyframe_points[-1].interpolation = 'LINEAR'
-				curves[0+1].keyframe_points.add(1)
-				curves[0+1].keyframe_points[-1].co = [time, renderOrigin.y]
-				curves[0+1].keyframe_points[-1].interpolation = 'LINEAR'
-				curves[0+2].keyframe_points.add(1)
-				curves[0+2].keyframe_points[-1].co = [time, renderOrigin.z]
-				curves[0+2].keyframe_points[-1].interpolation = 'LINEAR'
+				afx_utils.AddKey_Location(self.interKey, curves[0+0].keyframe_points, curves[0+1].keyframe_points, curves[0+2].keyframe_points, time, renderOrigin)
 				
-				qAngle = QAngle(BXR,BYR,BZR)
+				qAngle = afx_utils.QAngle(BXR,BYR,BZR)
 				
 				quat = qAngle.to_quaternion() * self.blenderCamUpQuat
 				
@@ -330,18 +328,7 @@ class BvhImporter(bpy.types.Operator, vs_utils.Logger):
 				
 				lastQuat = quat
 				
-				curves[0+3].keyframe_points.add(1)
-				curves[0+3].keyframe_points[-1].co = [time, quat.w]
-				curves[0+3].keyframe_points[-1].interpolation = 'LINEAR'
-				curves[0+4].keyframe_points.add(1)
-				curves[0+4].keyframe_points[-1].co = [time, quat.x]
-				curves[0+4].keyframe_points[-1].interpolation = 'LINEAR'
-				curves[0+5].keyframe_points.add(1)
-				curves[0+5].keyframe_points[-1].co = [time, quat.y]
-				curves[0+5].keyframe_points[-1].interpolation = 'LINEAR'
-				curves[0+6].keyframe_points.add(1)
-				curves[0+6].keyframe_points[-1].co = [time, quat.z]
-				curves[0+6].keyframe_points[-1].interpolation = 'LINEAR'
+				afx_utils.AddKey_Rotation(self.interKey, curves[0+3].keyframe_points, curves[0+4].keyframe_points, curves[0+5].keyframe_points, curves[0+6].keyframe_points, time, quat)
 			
 			if not frameCount == frames:
 				self.error("Frames are missing in BVH file.")
