@@ -54,6 +54,10 @@ Blender doesn't support proper interpolation of curves for quaternions yet.
 
 Changelog:
 
+1.5.1 (2018-08-16T08:24Z):
+- Update HLAE Camera IO (.cam) export:
+  - Fixed it not working when camera object name did not match camera object data name
+
 1.5.0 (2018-04-27T17:11Z):
 - Added HLAE Camera IO (.cam) import
 - Added HLAE Camera IO (.cam) export

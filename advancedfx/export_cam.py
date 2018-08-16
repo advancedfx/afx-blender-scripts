@@ -1,7 +1,7 @@
 # Copyright (c) advancedfx.org
 #
 # Last changes:
-# 2018-04-27 dominik.matrixstorm.com
+# 2018-08-16 dominik.matrixstorm.com
 #
 # First changes:
 # 2018-04-28 dominik.matrixstorm.com
@@ -85,12 +85,7 @@ class CamExporter(bpy.types.Operator, vs_utils.Logger):
 			self.error("No camera selected.")
 			return False
 			
-		cam = None
-		
-		for i in range(len(bpy.data.cameras)):
-			if bpy.data.cameras[i].name == obj.name:
-				cam = bpy.data.cameras[i]
-				break
+		cam = obj.data
 		
 		lastRot = None
 		

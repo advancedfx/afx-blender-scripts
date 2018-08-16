@@ -1,7 +1,7 @@
 # Copyright (c) advancedfx.org
 #
 # Last changes:
-# 2018-04-27 dominik.matrixstorm.com
+# 2018-08-16 dominik.matrixstorm.com
 #
 # First changes:
 # 2016-07-19 dominik.matrixstorm.com
@@ -11,7 +11,7 @@ import bpy
 bl_info = {
 	"name": "advancedfx Blender Scripts",
 	"author": "Dominik Tugend",
-	"version": (1, 5, 0),
+	"version": (1, 5, 1),
 	"blender": (2, 77, 0),
 	"location": "File > Import/Export",
 	"description": "For inter-operation with HLAE.",
