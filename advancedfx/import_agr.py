@@ -1,7 +1,7 @@
 # Copyright (c) advancedfx.org
 #
 # Last changes:
-# 2018-04-26 dominik.matrixstorm.com
+# 2018-10-05 dominik.matrixstorm.com
 #
 # First changes:
 # 2016-07-19 dominik.matrixstorm.com
@@ -19,6 +19,7 @@ from io_scene_valvesource import import_smd as vs_import_smd, utils as vs_utils
 from advancedfx import utils as afx_utils
 
 class GAgrImporter:
+	onlyBones = False
 	smd = None
 
 class SmdImporterEx(vs_import_smd.SmdImporter):
@@ -42,6 +43,16 @@ class SmdImporterEx(vs_import_smd.SmdImporter):
 		self.readQC(self.filepath, False, False, False, 'XYZ', outer_qc = True)
 		GAgrImporter.smd = self.smd
 		return {'FINISHED'}
+		
+	def readPolys(self):
+		if GAgrImporter.onlyBones:
+			return
+		super(SmdImporterEx, self).readPolys()
+	
+	def readShapes(self):
+		if GAgrImporter.onlyBones:
+			return
+		super(SmdImporterEx, self).readShapes()
 
 
 def ReadString(file):
@@ -279,7 +290,12 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 		name="Preserve SMD Polygons & Normals",
 		description="Import raw (faster), disconnected polygons from SMD files; these are harder to edit but a closer match to the original mesh",
 		default=True)
-	
+		
+	onlyBones = bpy.props.BoolProperty(
+		name="Bones (skeleton) only",
+		description="Import ony bones (skeleton) (faster).",
+		default=False)
+		
 	# class properties
 	valveMatrixToBlender = mathutils.Matrix.Rotation(math.pi/2,4,'Z')
 	blenderCamUpQuat = mathutils.Quaternion((math.cos(0.5 * math.radians(90.0)), math.sin(0.5* math.radians(90.0)), 0.0, 0.0))
@@ -314,6 +330,7 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 		filePath = filePath + "/" + os.path.basename(filePath) + ".qc"
 		
 		GAgrImporter.smd = None
+		GAgrImporter.onlyBones = self.onlyBones
 		modelData = None
 		
 		try:

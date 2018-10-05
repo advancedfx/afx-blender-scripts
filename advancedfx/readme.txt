@@ -54,6 +54,10 @@ Blender doesn't support proper interpolation of curves for quaternions yet.
 
 Changelog:
 
+1.6.0 (2018-10-05T17:45Z):
+- Update HLAE AGR Import:
+  - Added option "Bones (skeleton) only", thanks to https://github.com/Darkhandrob
+
 1.5.1 (2018-08-16T08:24Z):
 - Update HLAE Camera IO (.cam) export:
   - Fixed it not working when camera object name did not match camera object data name
