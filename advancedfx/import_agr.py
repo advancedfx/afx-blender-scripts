@@ -293,7 +293,7 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 		
 	onlyBones = bpy.props.BoolProperty(
 		name="Bones (skeleton) only",
-		description="Import ony bones (skeleton) (faster).",
+		description="Import only bones (skeletons) (faster).",
 		default=False)
 		
 	# class properties
