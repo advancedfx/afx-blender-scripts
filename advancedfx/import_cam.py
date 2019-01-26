@@ -1,11 +1,3 @@
-# Copyright (c) advancedfx.org
-#
-# Last changes:
-# 2018-04-26 dominik.matrixstorm.com
-#
-# First changes:
-# 2018-04-26 dominik.matrixstorm.com
-
 import gc
 import math
 import os
@@ -45,23 +37,23 @@ class CameraData:
 		self.curves = []
 
 class CamImporter(bpy.types.Operator, vs_utils.Logger):
-	bl_idname = "advancedfx.cam_importer"
+	bl_idname = "advancedfx.camimporter"
 	bl_label = "HLAE Camera IO (.cam)"
 	bl_options = {'UNDO'}
 	
 	# Properties used by the file browser
-	filepath = bpy.props.StringProperty(subtype="FILE_PATH")
-	filename_ext = ".cam"
-	filter_glob = bpy.props.StringProperty(default="*.cam", options={'HIDDEN'})
+	filepath: bpy.props.StringProperty(subtype="FILE_PATH")
+	filename_ext: ".cam"
+	filter_glob: bpy.props.StringProperty(default="*.cam", options={'HIDDEN'})
 
 	# Custom properties
 	
-	interKey = bpy.props.BoolProperty(
+	interKey: bpy.props.BoolProperty(
 		name="Add interpolated key frames",
 		description="Create interpolated key frames for frames in-between the original key frames.",
 		default=False)
 	
-	global_scale = bpy.props.FloatProperty(
+	global_scale: bpy.props.FloatProperty(
 		name="Scale",
 		description="Scale everything by this value",
 		min=0.000001, max=1000000.0,
@@ -89,10 +81,9 @@ class CamImporter(bpy.types.Operator, vs_utils.Logger):
 		o = bpy.data.objects.new(camName, camBData)
 		c = bpy.data.cameras[o.name]
 
-		context.scene.objects.link(o)
+		context.scene.collection.objects.link(o)
 
-		o.select = True
-		context.scene.objects.active = o
+		#vs_utils.select_only(o)
 			
 		camData = CameraData(o,c)
 			
@@ -102,8 +93,6 @@ class CamImporter(bpy.types.Operator, vs_utils.Logger):
 				
 		
 		# Create actions and their curves (boobs):
-		
-		bpy.context.scene.objects.active = o
 		
 		o.animation_data_create()
 		action = bpy.data.actions.new(name="game_data")
@@ -148,7 +137,7 @@ class CamImporter(bpy.types.Operator, vs_utils.Logger):
 			self.error("Failed to create camera.")
 			return False
 		
-		bpy.context.scene.objects.active = camData.o
+		#vs_utils.select_only( camData.o )
 		
 		file = None
 		
@@ -206,7 +195,7 @@ class CamImporter(bpy.types.Operator, vs_utils.Logger):
 				renderOrigin = mathutils.Vector((-float(words[2]),float(words[1]),float(words[3]))) * self.global_scale
 				qAngle = afx_utils.QAngle(float(words[5]),float(words[6]),float(words[4]))
 				
-				quat = qAngle.to_quaternion() * self.blenderCamUpQuat
+				quat = qAngle.to_quaternion() @ self.blenderCamUpQuat
 				
 				# Make sure we travel the short way:
 				if lastQuat:

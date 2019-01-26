@@ -1,11 +1,3 @@
-# Copyright (c) advancedfx.org
-#
-# Last changes:
-# 2018-08-16 dominik.matrixstorm.com
-#
-# First changes:
-# 2018-04-28 dominik.matrixstorm.com
-
 import gc
 import math
 import os
@@ -29,17 +21,17 @@ def WriteHeader(file, frames, frameTime):
 
 
 class CamExporter(bpy.types.Operator, vs_utils.Logger):
-	bl_idname = "advancedfx.cam_exporter"
+	bl_idname = "advancedfx.camexporter"
 	bl_label = "HLAE Camera IO (.cam)"
 	bl_options = {'UNDO'}
 	
 	# Properties used by the file browser
-	filepath = bpy.props.StringProperty(subtype="FILE_PATH")
-	filename_ext = ".cam"
-	filter_glob = bpy.props.StringProperty(default="*.cam", options={'HIDDEN'})
+	filepath: bpy.props.StringProperty(subtype="FILE_PATH")
+	filename_ext: ".cam"
+	filter_glob: bpy.props.StringProperty(default="*.cam", options={'HIDDEN'})
 
 	# Custom properties
-	global_scale = bpy.props.FloatProperty(
+	global_scale: bpy.props.FloatProperty(
 		name="Scale",
 		description="Scale everything by this value",
 		min=0.000001, max=1000000.0,
@@ -47,12 +39,12 @@ class CamExporter(bpy.types.Operator, vs_utils.Logger):
 		default=100.0,
 	)
 	
-	frame_start = bpy.props.IntProperty(
+	frame_start: bpy.props.IntProperty(
 		name="Start Frame",
 		description="Starting frame to export",
 		default=0,
 	)
-	frame_end = bpy.props.IntProperty(
+	frame_end: bpy.props.IntProperty(
 		name="End Frame",
 		description="End frame to export",
 		default=0,
@@ -79,7 +71,7 @@ class CamExporter(bpy.types.Operator, vs_utils.Logger):
 		frame_current = scene.frame_current
 		fps = context.scene.render.fps
 		
-		obj = context.scene.objects.active
+		obj = context.active_object
 		
 		if (obj is None) or (obj.type != 'CAMERA'):
 			self.error("No camera selected.")
@@ -108,7 +100,7 @@ class CamExporter(bpy.types.Operator, vs_utils.Logger):
 				scene.frame_set(frame)
 				
 				mat = obj.matrix_world
-				mat = mat * unRot
+				mat = mat @ unRot
 				
 				loc = mat.to_translation()
 				rot = mat.to_euler('YXZ') if lastRot is None else mat.to_euler('YXZ', lastRot)

@@ -1,15 +1,9 @@
-# Copyright (c) advancedfx.org
-#
-# Last changes:
-# 2018-10-05 dominik.matrixstorm.com
-#
-# First changes:
-# 2016-07-19 dominik.matrixstorm.com
-
 import gc
 import math
 import os
 import struct
+
+import traceback
 
 import bpy, bpy.props, bpy.ops
 import mathutils
@@ -249,30 +243,30 @@ class AgrTimeConverter:
 		return 1.0 + self.time * self.fps
 
 class AgrImporter(bpy.types.Operator, vs_utils.Logger):
-	bl_idname = "advancedfx.agr_importer"
+	bl_idname = "advancedfx.agrimporter"
 	bl_label = "HLAE afxGameRecord (.agr)"
 	bl_options = {'UNDO'}
 	
 	# Properties used by the file browser
-	filepath = bpy.props.StringProperty(subtype="FILE_PATH")
-	filename_ext = ".agr"
-	filter_glob = bpy.props.StringProperty(default="*.agr", options={'HIDDEN'})
+	filepath: bpy.props.StringProperty(subtype="FILE_PATH")
+	filename_ext: ".agr"
+	filter_glob: bpy.props.StringProperty(default="*.agr", options={'HIDDEN'})
 
 	# Custom properties
 	
-	assetPath = bpy.props.StringProperty(
+	assetPath: bpy.props.StringProperty(
 		name="Asset Path",
 		description="Directory path containing the (decompiled) assets in a folder structure as in the pak01_dir.pak.",
 		default="",
 		#subtype = 'DIR_PATH'
 	)
 
-	interKey = bpy.props.BoolProperty(
+	interKey: bpy.props.BoolProperty(
 		name="Add interpolated key frames",
 		description="Create interpolated key frames for frames in-between the original key frames.",
 		default=False)
 
-	global_scale = bpy.props.FloatProperty(
+	global_scale: bpy.props.FloatProperty(
 		name="Scale",
 		description="Scale everything by this value",
 		min=0.000001, max=1000000.0,
@@ -280,18 +274,18 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 		default=0.01,
 	)
 	
-	scaleInvisibleZero = bpy.props.BoolProperty(
+	scaleInvisibleZero: bpy.props.BoolProperty(
 		name="Scale invisible to zero",
 		description="If set entities will scaled to zero when not visible.",
 		default=False,
 	)
 	
-	skipRemDoubles = bpy.props.BoolProperty(
+	skipRemDoubles: bpy.props.BoolProperty(
 		name="Preserve SMD Polygons & Normals",
 		description="Import raw (faster), disconnected polygons from SMD files; these are harder to edit but a closer match to the original mesh",
 		default=True)
 		
-	onlyBones = bpy.props.BoolProperty(
+	onlyBones: bpy.props.BoolProperty(
 		name="Bones (skeleton) only",
 		description="Import only bones (skeletons) (faster).",
 		default=False)
@@ -310,9 +304,9 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 		for area in context.screen.areas:
 			if area.type == 'VIEW_3D':
 				space = area.spaces.active
-				space.grid_lines = 64
-				space.grid_scale = self.global_scale * 512
-				space.grid_subdivisions = 8
+				#space.grid_lines = 64
+				#space.grid_scale = self.global_scale * 512
+				#space.grid_subdivisions = 8
 				space.clip_end = self.global_scale * 56756
 		
 		self.errorReport("Error report")
@@ -328,6 +322,7 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 		filePath = self.assetPath.rstrip("/\\") + "/" +modelHandle.modelName
 		filePath = os.path.splitext(filePath)[0]
 		filePath = filePath + "/" + os.path.basename(filePath) + ".qc"
+		filePath = filePath.replace("/", "\\")
 		
 		GAgrImporter.smd = None
 		GAgrImporter.onlyBones = self.onlyBones
@@ -366,7 +361,7 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 		a.scale[2] = self.global_scale
 		
 		# Create actions and their curves (boobs):
-		bpy.context.scene.objects.active = a
+		#vs_utils.select_only(a)
 		
 		a.animation_data_create()
 		action = bpy.data.actions.new(name="game_data")
@@ -433,10 +428,9 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 		o = bpy.data.objects.new(camName, camBData)
 		c = bpy.data.cameras[o.name]
 
-		context.scene.objects.link(o)
+		context.scene.collection.objects.link(o)
 
-		o.select = True
-		context.scene.objects.active = o
+		#vs_utils.select_only(o)
 			
 		camData = CameraData(o,c)
 			
@@ -446,8 +440,6 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 				
 		
 		# Create actions and their curves (boobs):
-		
-		bpy.context.scene.objects.active = o
 		
 		o.animation_data_create()
 		action = bpy.data.actions.new(name="game_data")
@@ -543,7 +535,7 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 								modelData =  modelHandle.modelData
 								if modelData: # this can happen if the model could not be loaded
 									curves = modelData.curves
-									bpy.context.scene.objects.active = modelData.smd.a
+									#vs_utils.select_only(modelData.smd.a)
 									afx_utils.AddKey_Visible(self.interKey, curves[0].keyframe_points, timeConverter.GetTime(), False)
 								
 								unusedModelHandles.append(modelHandle)
@@ -570,7 +562,7 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 						modelData = modelHandle.modelData
 						if modelData: # this can happen if the model could not be loaded
 							curves = modelData.curves
-							bpy.context.scene.objects.active = modelData.smd.a
+							#vs_utils.select_only( modelData.smd.a )
 							afx_utils.AddKey_Visible(self.interKey, curves[0].keyframe_points, timeConverter.GetTime(), False)
 						
 						unusedModelHandles.append(modelHandle)
@@ -599,7 +591,7 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 							modelData = modelHandle.modelData
 							if modelData: # this can happen if the model could not be loaded
 								curves = modelData.curves
-								bpy.context.scene.objects.active = modelData.smd.a
+								#vs_utils.select_only( modelData.smd.a )
 								afx_utils.AddKey_Visible(self.interKey, curves[0].keyframe_points, timeConverter.GetTime(), False)
 							
 							modelHandle = None
@@ -648,7 +640,7 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 							
 							curves = modelData.curves
 							
-							bpy.context.scene.objects.active = modelData.smd.a
+							#vs_utils.select_only( modelData.smd.a )
 							
 							afx_utils.AddKey_Visible(self.interKey, curves[0].keyframe_points, timeConverter.GetTime(), visible)
 							
@@ -681,18 +673,18 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 									
 									#self.warning(str(pos)+": "+str(i)+"("+bone.name+"): "+str(vec)+" "+str(quat))
 									
-									matrix = mathutils.Matrix.Translation(vec) * quat.to_matrix().to_4x4()
+									matrix = mathutils.Matrix.Translation(vec) @ quat.to_matrix().to_4x4()
 									
 									if bone.parent:
-										matrix = bone.parent.matrix * matrix
+										matrix = bone.parent.matrix @ matrix
 									else:
-										matrix = self.valveMatrixToBlender * matrix
+										matrix = self.valveMatrixToBlender @ matrix
 									
 									bone.matrix = matrix
 									
 									curves = modelData.curves
 									
-									bpy.context.scene.objects.active = modelData.smd.a
+									#vs_utils.select_only( modelData.smd.a )
 									
 									afx_utils.AddKey_Location(self.interKey, curves[8+i*7+0].keyframe_points, curves[8+i*7+1].keyframe_points, curves[8+i*7+2].keyframe_points, timeConverter.GetTime(), bone.location)
 									
@@ -724,7 +716,7 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 					lens = camData.c.sensor_width / (2.0 * math.tan(math.radians(fov) / 2.0))
 					
 					renderOrigin = renderOrigin * self.global_scale
-					renderRotQuat = renderAngles.to_quaternion() * self.blenderCamUpQuat
+					renderRotQuat = renderAngles.to_quaternion() @ self.blenderCamUpQuat
 					
 					# make sure we take the shortest path:
 					if lastCameraQuat is not None:
@@ -735,7 +727,7 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 					
 					curves = camData.curves
 					
-					bpy.context.scene.objects.active = camData.o
+					#vs_utils.select_only( camData.o )
 					
 					afx_utils.AddKey_Location(self.interKey, curves[0].keyframe_points, curves[1].keyframe_points, curves[2].keyframe_points, timeConverter.GetTime(), renderOrigin)
 					

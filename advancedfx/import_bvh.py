@@ -1,11 +1,3 @@
-# Copyright (c) advancedfx.org
-#
-# Last changes:
-# 2018-04-26 dominik.matrixstorm.com
-#
-# First changes:
-# 2009-09-01 dominik.matrixstorm.com
-
 import gc
 import math
 import os
@@ -132,23 +124,23 @@ class CameraData:
 		self.curves = []
 
 class BvhImporter(bpy.types.Operator, vs_utils.Logger):
-	bl_idname = "advancedfx.bvh_importer"
+	bl_idname = "advancedfx.bvhimporter"
 	bl_label = "HLAE old Cam IO (.bvh)"
 	bl_options = {'UNDO'}
 	
 	# Properties used by the file browser
-	filepath = bpy.props.StringProperty(subtype="FILE_PATH")
-	filename_ext = ".bvh"
-	filter_glob = bpy.props.StringProperty(default="*.bvh", options={'HIDDEN'})
+	filepath: bpy.props.StringProperty(subtype="FILE_PATH")
+	filename_ext: ".bvh"
+	filter_glob: bpy.props.StringProperty(default="*.bvh", options={'HIDDEN'})
 
 	# Custom properties
 	
-	interKey = bpy.props.BoolProperty(
+	interKey: bpy.props.BoolProperty(
 		name="Add interpolated key frames",
 		description="Create interpolated key frames for frames in-between the original key frames.",
 		default=False)
 	
-	global_scale = bpy.props.FloatProperty(
+	global_scale: bpy.props.FloatProperty(
 		name="Scale",
 		description="Scale everything by this value",
 		min=0.000001, max=1000000.0,
@@ -156,27 +148,27 @@ class BvhImporter(bpy.types.Operator, vs_utils.Logger):
 		default=0.01,
 	)
 
-	cameraFov = bpy.props.FloatProperty(
+	cameraFov: bpy.props.FloatProperty(
 		name="FOV",
 		description="Camera engine FOV",
 		min=1.0, max=179.0,
 		default=90,
 	)
 	
-	scaleFov = bpy.props.BoolProperty(
+	scaleFov: bpy.props.BoolProperty(
 		name="Scale FOV",
 		description="If to scale FOV by aspect ratio (required i.e. for CS:GO and Alien Swarm).",
 		default=True,
 	)
 
-	screenWidth = bpy.props.FloatProperty(
+	screenWidth: bpy.props.FloatProperty(
 		name="Screen Width",
 		description="Only relevant when Scale FOV is set.",
 		min=1.0, max=65536.0,
 		default=16.0,
 	)
 
-	screenHeight = bpy.props.FloatProperty(
+	screenHeight: bpy.props.FloatProperty(
 		name="Screen Height",
 		description="Only relevant when Scale FOV is set.",
 		min=1.0, max=65536.0,
@@ -202,10 +194,9 @@ class BvhImporter(bpy.types.Operator, vs_utils.Logger):
 		camBData = bpy.data.cameras.new(camName)
 		o = bpy.data.objects.new(camName, camBData)
 
-		context.scene.objects.link(o)
+		context.scene.collection.objects.link(o)
 
-		o.select = True
-		context.scene.objects.active = o
+		#vs_utils.select_only(o)
 			
 		camData = CameraData(o)
 			
@@ -215,8 +206,6 @@ class BvhImporter(bpy.types.Operator, vs_utils.Logger):
 				
 		
 		# Create actions and their curves (boobs):
-		
-		bpy.context.scene.objects.active = o
 		
 		o.animation_data_create()
 		action = bpy.data.actions.new(name="game_data")
@@ -252,7 +241,7 @@ class BvhImporter(bpy.types.Operator, vs_utils.Logger):
 			self.error("Failed to create camera.")
 			return False
 		
-		bpy.context.scene.objects.active = camData.o
+		#vs_utils.select_only(camData.o)
 		camData.o.data.angle = self.calcCameraFov()
 		
 		file = None
@@ -318,7 +307,7 @@ class BvhImporter(bpy.types.Operator, vs_utils.Logger):
 				
 				qAngle = afx_utils.QAngle(BXR,BYR,BZR)
 				
-				quat = qAngle.to_quaternion() * self.blenderCamUpQuat
+				quat = qAngle.to_quaternion() @ self.blenderCamUpQuat
 				
 				# Make sure we travel the short way:
 				if lastQuat:

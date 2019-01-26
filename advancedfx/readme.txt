@@ -1,8 +1,10 @@
 Installation:
 
-You need to install Blender Source Tools first
-( http://steamreview.org/BlenderSourceTools/ ), since we depend on it.
-This version of afx-blender-scripts was built using Blender Source Tools 2.10.2.
+You need to install latest Blender Source Tools first
+( https://github.com/Artfunkel/BlenderSourceTools/tree/master/io_scene_valvesource ),
+since we depend on it.
+This version of afx-blender-scripts was built using
+Blender Source Tools 2.11.0b1-3251fc47b768116b91a8f5550166bc5ccb01efdf.
 
 If you have a previous version of afx-blender-scripts installed, uninstall
 it first through Blender!
@@ -53,6 +55,10 @@ Blender doesn't support proper interpolation of curves for quaternions yet.
 
 
 Changelog:
+
+1.7.0 (2019-01-26T14:18Z):
+- Updated to Blender 2.80 beta (needs latest Blender Source Tools 2.11.0b1-3251fc47b768116b91a8f5550166bc5ccb01efdf or newer ( https://github.com/Artfunkel/BlenderSourceTools/tree/master/io_scene_valvesource )).
+- Fixed HLAE BVH Export exporting wrong rotation.
 
 1.6.0 (2018-10-05T17:45Z):
 - Update HLAE AGR Import:

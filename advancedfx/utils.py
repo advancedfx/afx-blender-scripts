@@ -1,14 +1,5 @@
-# Copyright (c) advancedfx.org
-#
-# Last changes:
-# 2018-04-26 dominik.matrixstorm.com
-#
-# First changes:
-# 2016-07-19 dominik.matrixstorm.com
-
-import math
-
 import mathutils
+import math
 
 
 class QAngle:
@@ -27,7 +18,7 @@ class QAngle:
 		rollH = 0.5 * math.radians(self.z)
 		qRollX = mathutils.Quaternion((math.cos(rollH), 0.0, math.sin(rollH), 0.0))
 		 
-		return qYawZ * qPitchY * qRollX
+		return qYawZ @ qPitchY @ qRollX
 
 def GetInterKeyRange(lastTime, time):
 	loF = lastTime

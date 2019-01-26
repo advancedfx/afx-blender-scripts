@@ -1,11 +1,3 @@
-# Copyright (c) advancedfx.org
-#
-# Last changes:
-# 2018-04-27 dominik.matrixstorm.com
-#
-# First changes:
-# 2009-09-03 dominik.matrixstorm.com
-
 import gc
 import math
 import os
@@ -38,17 +30,17 @@ def WriteHeader(file, frames, frameTime):
 	file.write("Frame Time: "+FloatToBvhString(frameTime)+"\n")
 	
 class BvhExporter(bpy.types.Operator, vs_utils.Logger):
-	bl_idname = "advancedfx.bvh_exporter"
+	bl_idname = "advancedfx.bvhexporter"
 	bl_label = "HLAE old Cam IO (.bvh)"
 	bl_options = {'UNDO'}
 	
 	# Properties used by the file browser
-	filepath = bpy.props.StringProperty(subtype="FILE_PATH")
-	filename_ext = ".bvh"
-	filter_glob = bpy.props.StringProperty(default="*.bvh", options={'HIDDEN'})
+	filepath: bpy.props.StringProperty(subtype="FILE_PATH")
+	filename_ext: ".bvh"
+	filter_glob: bpy.props.StringProperty(default="*.bvh", options={'HIDDEN'})
 
 	# Custom properties
-	global_scale = bpy.props.FloatProperty(
+	global_scale: bpy.props.FloatProperty(
 		name="Scale",
 		description="Scale everything by this value",
 		min=0.000001, max=1000000.0,
@@ -56,12 +48,12 @@ class BvhExporter(bpy.types.Operator, vs_utils.Logger):
 		default=100.0,
 	)
 	
-	frame_start = bpy.props.IntProperty(
+	frame_start: bpy.props.IntProperty(
 		name="Start Frame",
 		description="Starting frame to export",
 		default=0,
 	)
-	frame_end = bpy.props.IntProperty(
+	frame_end: bpy.props.IntProperty(
 		name="End Frame",
 		description="End frame to export",
 		default=0,
@@ -88,7 +80,7 @@ class BvhExporter(bpy.types.Operator, vs_utils.Logger):
 		frame_current = scene.frame_current
 		fps = context.scene.render.fps
 		
-		obj = context.scene.objects.active
+		obj = context.active_object
 		
 		if obj is None:
 			self.error("No object selected.")
@@ -115,10 +107,10 @@ class BvhExporter(bpy.types.Operator, vs_utils.Logger):
 				scene.frame_set(frame)
 				
 				mat = obj.matrix_world
-				mat = mat * unRot
+				mat = mat @ unRot
 				
 				loc = mat.to_translation()
-				rot = mat.to_euler('YXZ') if lastRot is None else mat.to_euler('YXZ', lastRot)
+				rot = mat.to_euler('XZY') if lastRot is None else mat.to_euler('XZY', lastRot)
 				lastRot = rot
 				
 				loc = mathutils.Vector((loc[1],-loc[0],loc[2]))
@@ -127,7 +119,7 @@ class BvhExporter(bpy.types.Operator, vs_utils.Logger):
 				Y =  loc[2] * self.global_scale
 				Z = -loc[0] * self.global_scale
 				
-				qAngleVec = mathutils.Vector((rot[1],-rot[0],rot[2]))
+				qAngleVec = mathutils.Vector((rot[0],rot[2],rot[1]))
 				
 				ZR = -math.degrees(qAngleVec[2])
 				XR = -math.degrees(qAngleVec[0])
