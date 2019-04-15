@@ -3,7 +3,7 @@ import bpy
 bl_info = {
 	"name": "advancedfx Blender Scripts",
 	"author": "Dominik Tugend",
-	"version": (1, 7, 0),
+	"version": (1, 7, 1),
 	"blender": (2, 80, 0),
 	"location": "File > Import/Export",
 	"description": "For inter-operation with HLAE.",

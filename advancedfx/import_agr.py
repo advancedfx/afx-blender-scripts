@@ -15,26 +15,38 @@ from advancedfx import utils as afx_utils
 class GAgrImporter:
 	onlyBones = False
 	smd = None
+	qc = None
 
 class SmdImporterEx(vs_import_smd.SmdImporter):
 	bl_idname = "advancedfx.smd_importer_ex"
 	
-	filepath = bpy.props.StringProperty(subtype="FILE_PATH")
+	qc = None
+	smd = None
 
-	doAnim = bpy.props.BoolProperty(name="", default=True)
-	skipRemDoubles = bpy.props.BoolProperty(name="",description="",default=False)
-	append = bpy.props.EnumProperty(name="",description="",items=(
-		('VALIDATE',"",""),
-		('APPEND',"",""),
-		('NEW_ARMATURE',"","")),
+	# Properties used by the file browser
+	filepath : bpy.props.StringProperty(name="File Path", description="File filepath used for importing the SMD/VTA/DMX/QC file", maxlen=1024, default="", options={'HIDDEN'})
+	files : bpy.props.CollectionProperty(type=bpy.types.OperatorFileListElement, options={'HIDDEN'})
+	directory : bpy.props.StringProperty(maxlen=1024, default="", subtype='FILE_PATH', options={'HIDDEN'})
+	filter_folder : bpy.props.BoolProperty(name="Filter Folders", description="", default=True, options={'HIDDEN'})
+	filter_glob : bpy.props.StringProperty(default="*.smd;*.vta;*.dmx;*.qc;*.qci", options={'HIDDEN'})
+
+	# Custom properties
+	doAnim : bpy.props.BoolProperty(name="importer_doanims", default=True)
+	makeCamera : bpy.props.BoolProperty(name="importer_makecamera",description="importer_makecamera_tip",default=False)
+	append : bpy.props.EnumProperty(name="importer_bones_mode",description="importer_bones_mode_desc",items=(
+		('VALIDATE',"importer_bones_validate","importer_bones_validate_desc"),
+		('APPEND',"importer_bones_append","importer_bones_append_desc"),
+		('NEW_ARMATURE',"importer_bones_newarm","importer_bones_newarm_desc")),
 		default='APPEND')
-	boneMode = bpy.props.EnumProperty(name="",items=(('NONE','Default',''),('ARROWS','Arrows',''),('SPHERE','Sphere','')),default='SPHERE',description="")
-
+	upAxis : bpy.props.EnumProperty(name="Up Axis",items=vs_utils.axes,default='Z',description="importer_up_tip")
+	rotMode : bpy.props.EnumProperty(name="importer_rotmode",items=( ('XYZ', "Euler", ''), ('QUATERNION', "Quaternion", "") ),default='XYZ',description="importer_rotmode_tip")
+	boneMode : bpy.props.EnumProperty(name="importer_bonemode",items=(('NONE','Default',''),('ARROWS','Arrows',''),('SPHERE','Sphere','')),default='SPHERE',description="importer_bonemode_tip")
 	
 	def execute(self, context):
 		self.existingBones = []
 		self.num_files_imported = 0
 		self.readQC(self.filepath, False, False, False, 'XYZ', outer_qc = True)
+		GAgrImporter.qc = self.qc
 		GAgrImporter.smd = self.smd
 		return {'FINISHED'}
 		
@@ -190,7 +202,8 @@ class AgrDictionary:
 		return False
 		
 class ModelData:
-	def __init__(self,smd):
+	def __init__(self,qc,smd):
+		self.qc = qc
 		self.smd = smd
 		self.curves = []
 
@@ -271,7 +284,7 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 		description="Scale everything by this value",
 		min=0.000001, max=1000000.0,
 		soft_min=0.001, soft_max=1.0,
-		default=0.01,
+		default=0.0254,
 	)
 	
 	scaleInvisibleZero: bpy.props.BoolProperty(
@@ -280,11 +293,6 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 		default=False,
 	)
 	
-	skipRemDoubles: bpy.props.BoolProperty(
-		name="Preserve SMD Polygons & Normals",
-		description="Import raw (faster), disconnected polygons from SMD files; these are harder to edit but a closer match to the original mesh",
-		default=True)
-		
 	onlyBones: bpy.props.BoolProperty(
 		name="Bones (skeleton) only",
 		description="Import only bones (skeletons) (faster).",
@@ -324,28 +332,29 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 		filePath = filePath + "/" + os.path.basename(filePath) + ".qc"
 		filePath = filePath.replace("/", "\\")
 		
+		GAgrImporter.qc = None
 		GAgrImporter.smd = None
 		GAgrImporter.onlyBones = self.onlyBones
 		modelData = None
 		
 		try:
-			#bpy.ops.import_scene.smd(filepath=filePath,files=[],doAnim=False)
-			bpy.ops.advancedfx.smd_importer_ex(filepath=filePath, doAnim=False, skipRemDoubles=self.skipRemDoubles)
-			modelData = ModelData(GAgrImporter.smd)
+			bpy.ops.advancedfx.smd_importer_ex(filepath=filePath, doAnim=False)
+			modelData = ModelData(GAgrImporter.qc,GAgrImporter.smd)
 		except:
 			self.error("Failed to import \""+filePath+"\".")
 			return None
 		finally:
+			GAgrImporter.qc = None
 			GAgrImporter.smd = None
 			
-		a = modelData.smd.a
-		
 		# Update name:
 		name = modelHandle.modelName.rsplit('/',1)
 		name = name[len(name) -1]
 		name = (name[:30] + '..') if len(name) > 30 else name
 		name = "afx." +str(modelHandle.objNr)+ " " + name
-		a.name = name
+		modelData.qc.a.name = name
+		
+		a = modelData.smd.a
 		
 		# Fix rotation:
 		if a.rotation_mode != 'QUATERNION':

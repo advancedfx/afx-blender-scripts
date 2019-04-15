@@ -104,6 +104,9 @@ def AddKey_Location(interKey, keyframe_points_location_x, keyframe_points_locati
 	itemX.interpolation = 'CONSTANT'
 	itemY.interpolation = 'CONSTANT'
 	itemZ.interpolation = 'CONSTANT'
+	
+def AddKey_Scale(interKey, keyframe_points_scale_x, keyframe_points_scale_y, keyframe_points_scale_z, time, scale):
+	AddKey_Location(interKey, keyframe_points_scale_x, keyframe_points_scale_y, keyframe_points_scale_z, time, scale)
 
 def AddKey_Rotation(interKey, keyframe_points_rotation_quaternion_w, keyframe_points_rotation_quaternion_x, keyframe_points_rotation_quaternion_y, keyframe_points_rotation_quaternion_z, time, rotation):
 	if(interKey and 0 < len(keyframe_points_rotation_quaternion_w) and 0 < len(keyframe_points_rotation_quaternion_x) and 0 < len(keyframe_points_rotation_quaternion_y) and 0 < len(keyframe_points_rotation_quaternion_z)):
