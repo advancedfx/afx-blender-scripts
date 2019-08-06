@@ -1,7 +1,7 @@
 Installation:
 
 You need to install latest Blender Source Tools first
-( https://github.com/Artfunkel/BlenderSourceTools/tree/master/io_scene_valvesource ),
+( http://steamreview.org/BlenderSourceTools/ ),
 since we depend on it.
 This version of afx-blender-scripts was built using
 Blender Source Tools 2.11.0b1-3251fc47b768116b91a8f5550166bc5ccb01efdf.
