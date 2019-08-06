@@ -3,8 +3,8 @@ Installation:
 You need to install latest Blender Source Tools first
 ( http://steamreview.org/BlenderSourceTools/ ),
 since we depend on it.
-This version of afx-blender-scripts was built using
-Blender Source Tools 2.11.0b1-3251fc47b768116b91a8f5550166bc5ccb01efdf.
+This version of afx-blender-scripts was tested using
+Blender Source Tools 3.0.
 
 If you have a previous version of afx-blender-scripts installed, uninstall
 it first through Blender!
@@ -55,6 +55,9 @@ Blender doesn't support proper interpolation of curves for quaternions yet.
 
 
 Changelog:
+
+1.7.1 (2019-08-06T13:20Z):
+- Minor changes
 
 1.7.0 (2019-01-26T14:18Z):
 - Updated to Blender 2.80 beta (needs latest Blender Source Tools 2.11.0b1-3251fc47b768116b91a8f5550166bc5ccb01efdf or newer ( https://github.com/Artfunkel/BlenderSourceTools/tree/master/io_scene_valvesource )).
