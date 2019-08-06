@@ -281,10 +281,10 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 
 	global_scale: bpy.props.FloatProperty(
 		name="Scale",
-		description="Scale everything by this value",
+		description="Scale everything by this value (0.01 old default, 0.0254 is more accurate)",
 		min=0.000001, max=1000000.0,
 		soft_min=0.001, soft_max=1.0,
-		default=0.0254,
+		default=0.01,
 	)
 	
 	scaleInvisibleZero: bpy.props.BoolProperty(

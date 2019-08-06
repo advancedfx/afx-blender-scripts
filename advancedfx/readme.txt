@@ -56,6 +56,9 @@ Blender doesn't support proper interpolation of curves for quaternions yet.
 
 Changelog:
 
+1.7.1.1 (2019-08-06T13:32Z):
+- Changed back default scale to 0.01, even though 0.0254 is more accurate.
+
 1.7.1 (2019-08-06T13:20Z):
 - Minor changes
 
