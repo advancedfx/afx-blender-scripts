@@ -298,11 +298,6 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 		description="Import only bones (skeletons) (faster).",
 		default=False)
 		
-#	noPhysics: bpy.props.BoolProperty
-#		name="Skip Physics"
-#		description="Skips Physic models also known as Hitboxes"
-#		default=True)
-		
 	# class properties
 	valveMatrixToBlender = mathutils.Matrix.Rotation(math.pi/2,4,'Z')
 	blenderCamUpQuat = mathutils.Quaternion((math.cos(0.5 * math.radians(90.0)), math.sin(0.5* math.radians(90.0)), 0.0, 0.0))
