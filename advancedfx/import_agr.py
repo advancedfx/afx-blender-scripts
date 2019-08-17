@@ -258,15 +258,14 @@ class AgrTimeConverter:
 class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 	bl_idname = "advancedfx.agrimporter"
 	bl_label = "HLAE afxGameRecord (.agr)"
-	bl_options = {'UNDO'}
+	bl_options = {'REGISTER', 'UNDO', 'PRESET'}
 	
 	# Properties used by the file browser
 	filepath: bpy.props.StringProperty(subtype="FILE_PATH")
 	filename_ext: ".agr"
 	filter_glob: bpy.props.StringProperty(default="*.agr", options={'HIDDEN'})
 
-	# Custom properties
-	
+	# Custom properties	
 	assetPath: bpy.props.StringProperty(
 		name="Asset Path",
 		description="Directory path containing the (decompiled) assets in a folder structure as in the pak01_dir.pak.",
@@ -292,11 +291,12 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 		description="If set entities will scaled to zero when not visible.",
 		default=False,
 	)
-	
+
 	onlyBones: bpy.props.BoolProperty(
 		name="Bones (skeleton) only",
 		description="Import only bones (skeletons) (faster).",
 		default=False)
+		
 		
 	# class properties
 	valveMatrixToBlender = mathutils.Matrix.Rotation(math.pi/2,4,'Z')
