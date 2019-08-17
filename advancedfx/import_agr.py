@@ -281,10 +281,10 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 
 	global_scale: bpy.props.FloatProperty(
 		name="Scale",
-		description="Scale everything by this value",
+		description="Scale everything by this value (0.01 old default, 0.0254 is more accurate)",
 		min=0.000001, max=1000000.0,
 		soft_min=0.001, soft_max=1.0,
-		default=0.0254,
+		default=0.01,
 	)
 	
 	scaleInvisibleZero: bpy.props.BoolProperty(
@@ -297,6 +297,11 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 		name="Bones (skeleton) only",
 		description="Import only bones (skeletons) (faster).",
 		default=False)
+		
+#	noPhysics: bpy.props.BoolProperty
+#		name="Skip Physics"
+#		description="Skips Physic models also known as Hitboxes"
+#		default=True)
 		
 	# class properties
 	valveMatrixToBlender = mathutils.Matrix.Rotation(math.pi/2,4,'Z')
@@ -318,6 +323,17 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 				space.clip_end = self.global_scale * 56756
 		
 		self.errorReport("Error report")
+		
+		for i in bpy.data.objects: 
+		# Delete smd_bone_vis
+			if i.name.find("smd_bone_vis") != -1:
+				bpy.data.objects.remove(i)
+				
+		for i in bpy.data.objects: 
+		# Delete smd_bone_vis
+			if i.name.find("physics") != -1:
+				bpy.data.objects.remove(i)
+        
 		
 		return {'FINISHED'}
 		
@@ -362,7 +378,7 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 		for bone in a.pose.bones:
 			if bone.rotation_mode != 'QUATERNION':
 				bone.rotation_mode = 'QUATERNION'
-				
+			
 		# Scale:
 		
 		a.scale[0] = self.global_scale
@@ -430,6 +446,7 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 				
 		
 		return modelData
+		
 		
 	def createCamera(self, context, camName):
 		
