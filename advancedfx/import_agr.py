@@ -331,10 +331,14 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 				bpy.data.objects.remove(i)
 				
 		for i in bpy.data.objects: 
-		# Delete smd_bone_vis
+		# Delete physics objects
 			if i.name.find("physics") != -1:
 				bpy.data.objects.remove(i)
         
+		for i in bpy.data.collections: 
+		# Delete physics collections
+			if i.name.find("physics") != -1:
+				bpy.data.collections.remove(i)
 		
 		return {'FINISHED'}
 		
