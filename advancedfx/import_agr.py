@@ -291,6 +291,12 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 		description="If set entities will scaled to zero when not visible.",
 		default=False,
 	)
+	
+	noPhysics: bpy.props.BoolProperty(
+		name="Remove useless meshes",
+		description="Removes Physics and smd_bone_vis for faster workflow.",
+		default=True
+	)
 
 	onlyBones: bpy.props.BoolProperty(
 		name="Bones (skeleton) only",
