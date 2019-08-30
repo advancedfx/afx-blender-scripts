@@ -258,15 +258,14 @@ class AgrTimeConverter:
 class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 	bl_idname = "advancedfx.agrimporter"
 	bl_label = "HLAE afxGameRecord (.agr)"
-	bl_options = {'UNDO'}
+	bl_options = {'REGISTER', 'UNDO', 'PRESET'}
 	
 	# Properties used by the file browser
 	filepath: bpy.props.StringProperty(subtype="FILE_PATH")
 	filename_ext: ".agr"
 	filter_glob: bpy.props.StringProperty(default="*.agr", options={'HIDDEN'})
 
-	# Custom properties
-	
+	# Custom properties	
 	assetPath: bpy.props.StringProperty(
 		name="Asset Path",
 		description="Directory path containing the (decompiled) assets in a folder structure as in the pak01_dir.pak.",
@@ -293,10 +292,17 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 		default=False,
 	)
 	
+	noPhysics: bpy.props.BoolProperty(
+		name="Remove useless meshes",
+		description="Removes Physics and smd_bone_vis for faster workflow.",
+		default=True
+	)
+
 	onlyBones: bpy.props.BoolProperty(
 		name="Bones (skeleton) only",
 		description="Import only bones (skeletons) (faster).",
 		default=False)
+		
 		
 	# class properties
 	valveMatrixToBlender = mathutils.Matrix.Rotation(math.pi/2,4,'Z')
@@ -318,6 +324,21 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 				space.clip_end = self.global_scale * 56756
 		
 		self.errorReport("Error report")
+		
+		for i in bpy.data.objects: 
+		# Delete smd_bone_vis
+			if i.name.find("smd_bone_vis") != -1:
+				bpy.data.objects.remove(i)
+				
+		for i in bpy.data.objects: 
+		# Delete physics objects
+			if i.name.find("physics") != -1:
+				bpy.data.objects.remove(i)
+        
+		for i in bpy.data.collections: 
+		# Delete physics collections
+			if i.name.find("physics") != -1:
+				bpy.data.collections.remove(i)
 		
 		return {'FINISHED'}
 		
@@ -362,7 +383,7 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 		for bone in a.pose.bones:
 			if bone.rotation_mode != 'QUATERNION':
 				bone.rotation_mode = 'QUATERNION'
-				
+			
 		# Scale:
 		
 		a.scale[0] = self.global_scale
@@ -430,6 +451,7 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 				
 		
 		return modelData
+		
 		
 	def createCamera(self, context, camName):
 		
