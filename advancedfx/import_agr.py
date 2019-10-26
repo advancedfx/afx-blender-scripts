@@ -325,27 +325,30 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 		
 		self.errorReport("Error report")
 		
-		for i in bpy.data.objects: 
-		# Delete smd_bone_vis
-			if i.name.find("smd_bone_vis") != -1:
-				bpy.data.objects.remove(i)
-				
-		for i in bpy.data.objects: 
-		# Delete physics objects
-			if i.name.find("physics") != -1:
-				bpy.data.objects.remove(i)
-        
-		for i in bpy.data.collections: 
-		# Delete physics collections
-			if i.name.find("physics") != -1:
-				bpy.data.collections.remove(i)
-		
 		return {'FINISHED'}
 		
 	
 	def invoke(self, context, event):
 		bpy.context.window_manager.fileselect_add(self)
 		return {'RUNNING_MODAL'}
+	
+	def Physicsr(self):
+			for i in bpy.data.objects: 
+		# Delete smd_bone_vis
+				if i.name.find("smd_bone_vis") != -1:
+					bpy.data.objects.remove(i)
+				
+			for i in bpy.data.objects: 
+		# Delete physics objects
+				if i.name.find("physics") != -1:
+					bpy.data.objects.remove(i)
+       
+			for i in bpy.data.collections: 
+		# Delete physics collections
+				if i.name.find("physics") != -1:
+					bpy.data.collections.remove(i)
+					
+			return {'TEST'}
 	
 	def importModel(self, context, modelHandle):
 		filePath = self.assetPath.rstrip("/\\") + "/" +modelHandle.modelName
@@ -383,7 +386,12 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 		for bone in a.pose.bones:
 			if bone.rotation_mode != 'QUATERNION':
 				bone.rotation_mode = 'QUATERNION'
-			
+
+		# noPhysics:
+		# thanks to Darkhandrob for letting Devostated know how blind he is
+		if self.noPhysics:
+			self.Physicsr()
+					
 		# Scale:
 		
 		a.scale[0] = self.global_scale
