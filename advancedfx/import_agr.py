@@ -16,9 +16,6 @@ class GAgrImporter:
 	onlyBones = False
 	smd = None
 	qc = None
-	
-class PhysImporter:
-	bSkipPhysics = False
 
 class SmdImporterEx(vs_import_smd.SmdImporter):
 	bl_idname = "advancedfx.smd_importer_ex"
@@ -65,11 +62,10 @@ class SmdImporterEx(vs_import_smd.SmdImporter):
 		super(SmdImporterEx, self).readShapes()
 		
 	def readSMD(self, filepath, upAxis, rotMode, newscene = False, smd_type = None, target_layer = 0):
-		if PhysImporter.bSkipPhysics and smd_type == vs_utils.PHYS:
+		if SmdImporterEx.bSkipPhysics and smd_type == vs_utils.PHYS:
 			return 0
 		else:
 			return super().readSMD(filepath, upAxis, rotMode, newscene, smd_type, target_layer) # call parent method
-
 
 def ReadString(file):
 	buf = bytearray()
@@ -348,7 +344,7 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 		filePath = filePath + "/" + os.path.basename(filePath) + ".qc"
 		filePath = filePath.replace("/", "\\")
 		
-		PhysImporter.bSkipPhysics = self.bSkipPhysics
+		SmdImporterEx.bSkipPhysics = self.bSkipPhysics
 		GAgrImporter.qc = None
 		GAgrImporter.smd = None
 		GAgrImporter.onlyBones = self.onlyBones
@@ -381,7 +377,6 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 				bone.rotation_mode = 'QUATERNION'
 			
 		# Scale:
-		
 		a.scale[0] = self.global_scale
 		a.scale[1] = self.global_scale
 		a.scale[2] = self.global_scale
