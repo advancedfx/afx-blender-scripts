@@ -16,12 +16,16 @@ class GAgrImporter:
 	onlyBones = False
 	smd = None
 	qc = None
+	
+class PhysImporter:
+	bSkipPhysics = False
 
 class SmdImporterEx(vs_import_smd.SmdImporter):
 	bl_idname = "advancedfx.smd_importer_ex"
 	
 	qc = None
 	smd = None
+	bSkipPhysics = False
 
 	# Properties used by the file browser
 	filepath : bpy.props.StringProperty(name="File Path", description="File filepath used for importing the SMD/VTA/DMX/QC file", maxlen=1024, default="", options={'HIDDEN'})
@@ -59,6 +63,12 @@ class SmdImporterEx(vs_import_smd.SmdImporter):
 		if GAgrImporter.onlyBones:
 			return
 		super(SmdImporterEx, self).readShapes()
+		
+	def readSMD(self, filepath, upAxis, rotMode, newscene = False, smd_type = None, target_layer = 0):
+		if PhysImporter.bSkipPhysics and smd_type == vs_utils.PHYS:
+			return 0
+		else:
+			return super().readSMD(filepath, upAxis, rotMode, newscene, smd_type, target_layer) # call parent method
 
 
 def ReadString(file):
@@ -292,17 +302,17 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 		default=False,
 	)
 	
-	noPhysics: bpy.props.BoolProperty(
-		name="Remove useless meshes",
-		description="Removes Physics and smd_bone_vis for faster workflow.",
-		default=True
+	bSkipPhysics: bpy.props.BoolProperty(
+		name="Skip Physic Meshes",
+		description="Don't import physics (collision) meshes if the model contains them.",
+		default = True
 	)
 
 	onlyBones: bpy.props.BoolProperty(
 		name="Bones (skeleton) only",
 		description="Import only bones (skeletons) (faster).",
-		default=False)
-		
+		default=False
+	)
 		
 	# class properties
 	valveMatrixToBlender = mathutils.Matrix.Rotation(math.pi/2,4,'Z')
@@ -332,30 +342,13 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 		bpy.context.window_manager.fileselect_add(self)
 		return {'RUNNING_MODAL'}
 	
-	def Physicsr(self):
-			for i in bpy.data.objects: 
-		# Delete smd_bone_vis
-				if i.name.find("smd_bone_vis") != -1:
-					bpy.data.objects.remove(i)
-				
-			for i in bpy.data.objects: 
-		# Delete physics objects
-				if i.name.find("physics") != -1:
-					bpy.data.objects.remove(i)
-       
-			for i in bpy.data.collections: 
-		# Delete physics collections
-				if i.name.find("physics") != -1:
-					bpy.data.collections.remove(i)
-					
-			return {'TEST'}
-	
 	def importModel(self, context, modelHandle):
 		filePath = self.assetPath.rstrip("/\\") + "/" +modelHandle.modelName
 		filePath = os.path.splitext(filePath)[0]
 		filePath = filePath + "/" + os.path.basename(filePath) + ".qc"
 		filePath = filePath.replace("/", "\\")
 		
+		PhysImporter.bSkipPhysics = self.bSkipPhysics
 		GAgrImporter.qc = None
 		GAgrImporter.smd = None
 		GAgrImporter.onlyBones = self.onlyBones
@@ -386,12 +379,7 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 		for bone in a.pose.bones:
 			if bone.rotation_mode != 'QUATERNION':
 				bone.rotation_mode = 'QUATERNION'
-
-		# noPhysics:
-		# thanks to Darkhandrob for letting Devostated know how blind he is
-		if self.noPhysics:
-			self.Physicsr()
-					
+			
 		# Scale:
 		
 		a.scale[0] = self.global_scale
