@@ -20,6 +20,7 @@ class GAgrImporter:
 class SmdImporterEx(vs_import_smd.SmdImporter):
 	bl_idname = "advancedfx.smd_importer_ex"
 	
+	qc = None
 	smd = None
 	bSkipPhysics = False
 
