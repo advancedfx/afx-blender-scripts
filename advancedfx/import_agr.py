@@ -21,7 +21,6 @@ class SmdImporterEx(vs_import_smd.SmdImporter):
 	bl_idname = "advancedfx.smd_importer_ex"
 	
 	smd = None
-	bSkipPhysics = False
 
 	# Properties used by the file browser
 	filepath : bpy.props.StringProperty(name="File Path", description="File filepath used for importing the SMD/VTA/DMX/QC file", maxlen=1024, default="", options={'HIDDEN'})
@@ -58,12 +57,6 @@ class SmdImporterEx(vs_import_smd.SmdImporter):
 		if GAgrImporter.onlyBones:
 			return
 		super(SmdImporterEx, self).readShapes()
-        
-	def readSMD(self, filepath, upAxis, rotMode, newscene = False, smd_type = None, target_layer = 0):
-		if SmdImporterEx.bSkipPhysics and smd_type == vs_utils.PHYS:
-			return 0
-		else:
-			return super().readSMD(filepath, upAxis, rotMode, newscene, smd_type, target_layer) # call parent method
 
 
 def ReadString(file):
@@ -296,10 +289,10 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 		default=False,
 	)
 	
-	bSkipPhysics: bpy.props.BoolProperty(
-		name="Skip Physic Meshes",
-		description="Skips the import of physic (collision) meshes if the .qc contains them.",
-		default = True
+	noPhysics: bpy.props.BoolProperty(
+		name="Remove useless meshes",
+		description="Removes Physics and smd_bone_vis for faster workflow.",
+		default=True
 	)
 
 	onlyBones: bpy.props.BoolProperty(
@@ -339,6 +332,24 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 	def invoke(self, context, event):
 		bpy.context.window_manager.fileselect_add(self)
 		return {'RUNNING_MODAL'}
+	
+	def Physicsr(self):
+			for i in bpy.data.objects: 
+		# Delete smd_bone_vis
+				if i.name.find("smd_bone_vis") != -1:
+					bpy.data.objects.remove(i)
+				
+			for i in bpy.data.objects: 
+		# Delete physics objects
+				if i.name.find("physics") != -1:
+					bpy.data.objects.remove(i)
+       
+			for i in bpy.data.collections: 
+		# Delete physics collections
+				if i.name.find("physics") != -1:
+					bpy.data.collections.remove(i)
+					
+			return {'TEST'}
 	
 	def addCurvesToModel(self, context, modelData):
 		
@@ -456,7 +467,6 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 			filePath = filePath + "/" + os.path.basename(filePath) + ".qc"
 			filePath = filePath.replace("/", "\\")
 			
-			SmdImporterEx.bSkipPhysics = self.bSkipPhysics
 			GAgrImporter.smd = None
 			GAgrImporter.onlyBones = self.onlyBones
 			modelData = None
@@ -464,11 +474,8 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 			try:
 				bpy.ops.advancedfx.smd_importer_ex(filepath=filePath, doAnim=False)
 				modelData = ModelData(GAgrImporter.smd)
-			except Exception as e:
-				if '?.qc' in str(e):
-					pass
-				else:
-					self.error("Failed to import \""+filePath+"\".")
+			except:
+				self.error("Failed to import \""+filePath+"\".")
 				return None
 			finally:
 				GAgrImporter.smd = None
@@ -484,6 +491,11 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 			for bone in armature.pose.bones:
 				if bone.rotation_mode != 'QUATERNION':
 					bone.rotation_mode = 'QUATERNION'
+
+			# noPhysics:
+			# thanks to Darkhandrob for letting Devostated know how blind he is
+			if self.noPhysics:
+				self.Physicsr()
 						
 			# Scale:
 			
