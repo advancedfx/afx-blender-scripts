@@ -2,6 +2,7 @@ import gc
 import math
 import os
 import struct
+import copy
 
 import traceback
 
@@ -15,13 +16,12 @@ from advancedfx import utils as afx_utils
 class GAgrImporter:
 	onlyBones = False
 	smd = None
-	qc = None
 
 class SmdImporterEx(vs_import_smd.SmdImporter):
 	bl_idname = "advancedfx.smd_importer_ex"
 	
-	qc = None
 	smd = None
+	bSkipPhysics = False
 
 	# Properties used by the file browser
 	filepath : bpy.props.StringProperty(name="File Path", description="File filepath used for importing the SMD/VTA/DMX/QC file", maxlen=1024, default="", options={'HIDDEN'})
@@ -46,7 +46,6 @@ class SmdImporterEx(vs_import_smd.SmdImporter):
 		self.existingBones = []
 		self.num_files_imported = 0
 		self.readQC(self.filepath, False, False, False, 'XYZ', outer_qc = True)
-		GAgrImporter.qc = self.qc
 		GAgrImporter.smd = self.smd
 		return {'FINISHED'}
 		
@@ -59,6 +58,12 @@ class SmdImporterEx(vs_import_smd.SmdImporter):
 		if GAgrImporter.onlyBones:
 			return
 		super(SmdImporterEx, self).readShapes()
+        
+	def readSMD(self, filepath, upAxis, rotMode, newscene = False, smd_type = None, target_layer = 0):
+		if SmdImporterEx.bSkipPhysics and smd_type == vs_utils.PHYS:
+			return 0
+		else:
+			return super().readSMD(filepath, upAxis, rotMode, newscene, smd_type, target_layer) # call parent method
 
 
 def ReadString(file):
@@ -202,8 +207,7 @@ class AgrDictionary:
 		return False
 		
 class ModelData:
-	def __init__(self,qc,smd):
-		self.qc = qc
+	def __init__(self,smd):
 		self.smd = smd
 		self.curves = []
 
@@ -292,10 +296,10 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 		default=False,
 	)
 	
-	noPhysics: bpy.props.BoolProperty(
-		name="Remove useless meshes",
-		description="Removes Physics and smd_bone_vis for faster workflow.",
-		default=True
+	bSkipPhysics: bpy.props.BoolProperty(
+		name="Skip Physic Meshes",
+		description="Skips the import of physic (collision) meshes if the .qc contains them.",
+		default = True
 	)
 
 	onlyBones: bpy.props.BoolProperty(
@@ -303,7 +307,11 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 		description="Import only bones (skeletons) (faster).",
 		default=False)
 		
-		
+	modelInstancing: bpy.props.BoolProperty(
+		name="Model instancing",
+		description="Objects with same model are instanced, animation data is separate and modifiers duplicated (faster).",
+		default=True)
+	
 	# class properties
 	valveMatrixToBlender = mathutils.Matrix.Rotation(math.pi/2,4,'Z')
 	blenderCamUpQuat = mathutils.Quaternion((math.cos(0.5 * math.radians(90.0)), math.sin(0.5* math.radians(90.0)), 0.0, 0.0))
@@ -332,71 +340,9 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 		bpy.context.window_manager.fileselect_add(self)
 		return {'RUNNING_MODAL'}
 	
-	def Physicsr(self):
-			for i in bpy.data.objects: 
-		# Delete smd_bone_vis
-				if i.name.find("smd_bone_vis") != -1:
-					bpy.data.objects.remove(i)
-				
-			for i in bpy.data.objects: 
-		# Delete physics objects
-				if i.name.find("physics") != -1:
-					bpy.data.objects.remove(i)
-       
-			for i in bpy.data.collections: 
-		# Delete physics collections
-				if i.name.find("physics") != -1:
-					bpy.data.collections.remove(i)
-					
-			return {'TEST'}
-	
-	def importModel(self, context, modelHandle):
-		filePath = self.assetPath.rstrip("/\\") + "/" +modelHandle.modelName
-		filePath = os.path.splitext(filePath)[0]
-		filePath = filePath + "/" + os.path.basename(filePath) + ".qc"
-		filePath = filePath.replace("/", "\\")
-		
-		GAgrImporter.qc = None
-		GAgrImporter.smd = None
-		GAgrImporter.onlyBones = self.onlyBones
-		modelData = None
-		
-		try:
-			bpy.ops.advancedfx.smd_importer_ex(filepath=filePath, doAnim=False)
-			modelData = ModelData(GAgrImporter.qc,GAgrImporter.smd)
-		except:
-			self.error("Failed to import \""+filePath+"\".")
-			return None
-		finally:
-			GAgrImporter.qc = None
-			GAgrImporter.smd = None
-			
-		# Update name:
-		name = modelHandle.modelName.rsplit('/',1)
-		name = name[len(name) -1]
-		name = (name[:30] + '..') if len(name) > 30 else name
-		name = "afx." +str(modelHandle.objNr)+ " " + name
-		modelData.qc.a.name = name
+	def addCurvesToModel(self, context, modelData):
 		
 		a = modelData.smd.a
-		
-		# Fix rotation:
-		if a.rotation_mode != 'QUATERNION':
-			a.rotation_mode = 'QUATERNION'
-		for bone in a.pose.bones:
-			if bone.rotation_mode != 'QUATERNION':
-				bone.rotation_mode = 'QUATERNION'
-
-		# noPhysics:
-		# thanks to Darkhandrob for letting Devostated know how blind he is
-		if self.noPhysics:
-			self.Physicsr()
-					
-		# Scale:
-		
-		a.scale[0] = self.global_scale
-		a.scale[1] = self.global_scale
-		a.scale[2] = self.global_scale
 		
 		# Create actions and their curves (boobs):
 		#vs_utils.select_only(a)
@@ -404,7 +350,7 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 		a.animation_data_create()
 		action = bpy.data.actions.new(name="game_data")
 		a.animation_data.action = action
-
+		
 		modelData.curves.append(action.fcurves.new("hide_render"))
 		
 		# We are lazy, so we use frame 0 to set as not visible (initially) / hide_render 1:
@@ -456,11 +402,112 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 				m.poly_order = 1
 				m.mode = 'POLYNOMIAL'
 				m.use_additive = False
-				
 		
 		return modelData
+	
+	def importModel(self, context, modelHandle):
+	
+		def makeModelName(modelHandle):
+			name = modelHandle.modelName.rsplit('/',1)
+			name = name[len(name) -1]
+			name = (name[:30] + '..') if len(name) > 30 else name
+			name = "afx." +str(modelHandle.objNr)+ " " + name
+			return name
+			
+		def copyObj(src,parent=None):
+			dst = src.copy()
+			dst.animation_data_clear()
+			dst.modifiers.clear()
+			
+			for srcMod in src.modifiers:
+				
+				dstMod = dst.modifiers.new(srcMod.name, srcMod.type)
+				
+				#collect names of writable properties
+				properties = [p.identifier for p in srcMod.bl_rna.properties
+							  if not p.is_readonly]
+
+				# copy those properties
+				for prop in properties:
+					setattr(dstMod, prop, getattr(srcMod, prop))
 		
+				if (srcMod.name == 'Armature') and (srcMod.object == src.parent):
+					dstMod.object = parent
+			
+			bpy.context.scene.collection.objects.link(dst)
+			
+			for srcChild in src.children:
+				dstChild = copyObj(srcChild,dst)
+				dstChild.parent = dst
+				dstChild.matrix_parent_inverse = srcChild.matrix_parent_inverse.copy()
+			
+			return dst
 		
+		modelData = None
+		
+		if self.modelInstancing:
+			modelData = self.modelObjects.pop(modelHandle.modelName, None)
+		
+		if modelData is None:
+			# No instance we are allowed to use, so import it for real:
+		
+			filePath = self.assetPath.rstrip("/\\") + "/" +modelHandle.modelName
+			filePath = os.path.splitext(filePath)[0]
+			filePath = filePath + "/" + os.path.basename(filePath) + ".qc"
+			filePath = filePath.replace("/", "\\")
+			
+			SmdImporterEx.bSkipPhysics = self.bSkipPhysics
+			GAgrImporter.smd = None
+			GAgrImporter.onlyBones = self.onlyBones
+			modelData = None
+			
+			try:
+				bpy.ops.advancedfx.smd_importer_ex(filepath=filePath, doAnim=False)
+				modelData = ModelData(GAgrImporter.smd)
+			except Exception as e:
+				if '?.qc' in str(e):
+					pass
+				else:
+					self.error("Failed to import \""+filePath+"\".")
+				return None
+			finally:
+				GAgrImporter.smd = None
+				
+			armature = modelData.smd.a
+			
+			# Update name:
+			armature.name = makeModelName(modelHandle)
+			
+			# Fix rotation:
+			if armature.rotation_mode != 'QUATERNION':
+				armature.rotation_mode = 'QUATERNION'
+			for bone in armature.pose.bones:
+				if bone.rotation_mode != 'QUATERNION':
+					bone.rotation_mode = 'QUATERNION'
+						
+			# Scale:
+			
+			armature.scale[0] = self.global_scale
+			armature.scale[1] = self.global_scale
+			armature.scale[2] = self.global_scale
+			
+			# Insert into instance dictionary:
+			self.modelObjects[modelHandle.modelName] = modelData
+		
+		else:
+			print("Instancing %i (%s)." % (modelHandle.objNr,modelHandle.modelName))
+			modelData = copy.copy(modelData)
+			
+			modelData.smd = copy.copy(modelData.smd)
+			modelData.smd.a = copyObj(modelData.smd.a)
+			modelData.smd.a.name = makeModelName(modelHandle)
+			
+			modelData.curves = []
+		
+		modelData = self.addCurvesToModel(context, modelData)
+		
+		return modelData
+	
 	def createCamera(self, context, camName):
 		
 		camBData = bpy.data.cameras.new(camName)
@@ -502,6 +549,8 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 		file = None
 		
 		try:
+			self.modelObjects = {}
+		
 			file = open(self.filepath, 'rb')
 			
 			if file is None:
@@ -578,7 +627,7 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 									afx_utils.AddKey_Visible(self.interKey, curves[0].keyframe_points, timeConverter.GetTime(), False)
 								
 								unusedModelHandles.append(modelHandle)
-								print("Marking %i (%s) as hidden/reusable." % (modelHandle.objNr,modelHandle.modelName))
+								#print("Marking %i (%s) as hidden/reusable." % (modelHandle.objNr,modelHandle.modelName))
 							
 						file.seek(curOffset,0)
 						
@@ -605,7 +654,7 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 							afx_utils.AddKey_Visible(self.interKey, curves[0].keyframe_points, timeConverter.GetTime(), False)
 						
 						unusedModelHandles.append(modelHandle)
-						print("Marking %i (%s) as deleted/reusable." % (modelHandle.objNr,modelHandle.modelName))
+						#print("Marking %i (%s) as deleted/reusable." % (modelHandle.objNr,modelHandle.modelName))
 				
 				elif 'entity_state' == node0:
 					visible = None

@@ -3,8 +3,8 @@ Installation:
 You need to install latest Blender Source Tools first
 ( http://steamreview.org/BlenderSourceTools/ ),
 since we depend on it.
-This version of afx-blender-scripts was built using
-Blender Source Tools 2.11.0b1-3251fc47b768116b91a8f5550166bc5ccb01efdf.
+This version of afx-blender-scripts was tested using
+Blender Source Tools 3.0.1.
 
 If you have a previous version of afx-blender-scripts installed, uninstall
 it first through Blender!
@@ -55,6 +55,29 @@ Blender doesn't support proper interpolation of curves for quaternions yet.
 
 
 Changelog:
+
+1.9.4 (2020-01-03T14:04Z):
+- Removed "Remove useless meshes" option (by Devostated)
+- Added "Skip Physic Meshes" option, enabled by default (by Devostated)
+- Removed irritating missing ?.qc Error (by Devostated)
+- Test with Blender Source Tools 3.0.3.
+- Test with Blender Source Tools 2.81a.
+
+1.9.2 (2020-01-03T10:31Z):
+- Added option for model instancing (faster), enabled by default.
+- Test with Blender Source Tools 3.0.3.
+- Test with Blender Source Tools 2.81a.
+
+1.8.0 (2019-08-30T06:28Z):
+- Added option "Remove useless meshes" (Removes Physics and smd_bone_vis for faster workflow.) (by Devostated).
+- Added saving, loading and removing presets (by Devostated).
+- Test with Blender Source Tools 3.0.1.
+
+1.7.1.1 (2019-08-06T13:32Z):
+- Changed back default scale to 0.01, even though 0.0254 is more accurate.
+
+1.7.1 (2019-08-06T13:20Z):
+- Minor changes
 
 1.7.0 (2019-01-26T14:18Z):
 - Updated to Blender 2.80 beta (needs latest Blender Source Tools 2.11.0b1-3251fc47b768116b91a8f5550166bc5ccb01efdf or newer ( https://github.com/Artfunkel/BlenderSourceTools/tree/master/io_scene_valvesource )).
