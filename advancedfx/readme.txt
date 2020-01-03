@@ -56,10 +56,17 @@ Blender doesn't support proper interpolation of curves for quaternions yet.
 
 Changelog:
 
+1.9.4 (2020-01-03T14:20Z):
+- Removed "Remove useless meshes" option (by Devostated)
+- Added "Skip Physic Meshes" option, enabled by default (by Devostated)
+- Removed irritating missing ?.qc Error (by Devostated)
+- Test with Blender Source Tools 3.0.3.
+- Test with Blender Source Tools 2.81a.
+
 1.9.2 (2020-01-03T10:31Z):
 - Added option for model instancing (faster), enabled by default.
-- Tested with Blender Source Tools 3.0.3.
-- Tested with Blender 2.81a.
+- Test with Blender Source Tools 3.0.3.
+- Test with Blender Source Tools 2.81a.
 
 1.8.0 (2019-08-30T06:28Z):
 - Added option "Remove useless meshes" (Removes Physics and smd_bone_vis for faster workflow.) (by Devostated).
