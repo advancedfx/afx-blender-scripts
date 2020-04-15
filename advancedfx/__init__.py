@@ -13,7 +13,7 @@ bl_info = {
 	"category": "Import-Export",
 }
 
-from . import utils, import_agr, import_cam, export_cam, import_bvh, export_bvh
+from . import utils, import_agr, import_cam, export_cam, import_bvh, export_bvh, export_agr
 
 classes = (
 	import_bvh.BvhImporter,
@@ -21,11 +21,15 @@ classes = (
 	import_cam.CamImporter,
 	export_cam.CamExporter,
 	import_agr.AgrImporter,
+    export_agr.ExportAgr,
 )
 
 def menu_func_import_agr(self, context):
 	self.layout.operator(import_agr.AgrImporter.bl_idname, text="HLAE afxGameRecord (.agr)")
-	
+
+def menu_func_export_agr(self, context):
+    self.layout.operator(export_agr.ExportAgr.bl_idname, text="!Experimental! HLAE AGR Export (.fbx)")
+
 def menu_func_import_cam(self, context):
 	self.layout.operator(import_cam.CamImporter.bl_idname, text="HLAE Camera IO (.cam)")
 
@@ -48,6 +52,7 @@ def register():
 	bpy.types.TOPBAR_MT_file_export.append(menu_func_export_cam)
 	bpy.types.TOPBAR_MT_file_import.append(menu_func_import_bvh)
 	bpy.types.TOPBAR_MT_file_export.append(menu_func_export_bvh)
+	bpy.types.TOPBAR_MT_file_export.append(menu_func_export_agr)
 
 def unregister():
 	from bpy.utils import unregister_class
@@ -57,6 +62,7 @@ def unregister():
 	bpy.types.TOPBAR_MT_file_export.remove(menu_func_export_bvh)
 	bpy.types.TOPBAR_MT_file_import.remove(menu_func_import_bvh)
 	bpy.types.TOPBAR_MT_file_import.remove(menu_func_import_agr)
+	bpy.types.TOPBAR_MT_file_export.remove(menu_func_export_agr)
 
 if __name__ == "__main__":
 	unregister()
