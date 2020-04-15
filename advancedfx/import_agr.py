@@ -6,7 +6,7 @@ import copy
 
 import traceback
 
-import bpy, bpy.props, bpy.ops
+import bpy, bpy.props, bpy.ops, time
 import mathutils
 
 from io_scene_valvesource import import_smd as vs_import_smd, utils as vs_utils
@@ -20,6 +20,7 @@ class GAgrImporter:
 class SmdImporterEx(vs_import_smd.SmdImporter):
 	bl_idname = "advancedfx.smd_importer_ex"
 	
+	qc = None
 	smd = None
 	bSkipPhysics = False
 
@@ -32,6 +33,7 @@ class SmdImporterEx(vs_import_smd.SmdImporter):
 
 	# Custom properties
 	doAnim : bpy.props.BoolProperty(name="importer_doanims", default=True)
+	createCollections : bpy.props.BoolProperty(name="importer_use_collections", description="importer_use_collections_tip", default=False)
 	makeCamera : bpy.props.BoolProperty(name="importer_makecamera",description="importer_makecamera_tip",default=False)
 	append : bpy.props.EnumProperty(name="importer_bones_mode",description="importer_bones_mode_desc",items=(
 		('VALIDATE',"importer_bones_validate","importer_bones_validate_desc"),
@@ -41,7 +43,7 @@ class SmdImporterEx(vs_import_smd.SmdImporter):
 	upAxis : bpy.props.EnumProperty(name="Up Axis",items=vs_utils.axes,default='Z',description="importer_up_tip")
 	rotMode : bpy.props.EnumProperty(name="importer_rotmode",items=( ('XYZ', "Euler", ''), ('QUATERNION', "Quaternion", "") ),default='XYZ',description="importer_rotmode_tip")
 	boneMode : bpy.props.EnumProperty(name="importer_bonemode",items=(('NONE','Default',''),('ARROWS','Arrows',''),('SPHERE','Sphere','')),default='SPHERE',description="importer_bonemode_tip")
-	
+    
 	def execute(self, context):
 		self.existingBones = []
 		self.num_files_imported = 0
@@ -317,6 +319,7 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 	blenderCamUpQuat = mathutils.Quaternion((math.cos(0.5 * math.radians(90.0)), math.sin(0.5* math.radians(90.0)), 0.0, 0.0))
 	
 	def execute(self, context):
+		time_start = time.time()
 		try:
 			bpy.utils.register_class(SmdImporterEx)
 			ok = self.readAgr(context)
@@ -332,14 +335,24 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 				space.clip_end = self.global_scale * 56756
 		
 		self.errorReport("Error report")
+        
+		# Thanks to filiperino
+		bpy.context.scene.frame_start = 0
+		bpy.context.scene.frame_end = bpy.data.objects["afxCam"].animation_data.action.frame_range[1]
 		
+		print("AGR import finished in %.4f sec." % (time.time() - time_start))
 		return {'FINISHED'}
-		
 	
 	def invoke(self, context, event):
 		bpy.context.window_manager.fileselect_add(self)
 		return {'RUNNING_MODAL'}
 	
+	def noShared(self):
+		# Delete shared_player_skel which is junk for AGR
+		for i in bpy.data.objects: 	
+			if i.name.find("shared_player_skel") != -1:	
+				bpy.data.objects.remove(i)
+    
 	def addCurvesToModel(self, context, modelData):
 		
 		a = modelData.smd.a
@@ -413,7 +426,7 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 			name = (name[:30] + '..') if len(name) > 30 else name
 			name = "afx." +str(modelHandle.objNr)+ " " + name
 			return name
-			
+            
 		def copyObj(src,parent=None):
 			dst = src.copy()
 			dst.animation_data_clear()
@@ -442,9 +455,9 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 				dstChild.matrix_parent_inverse = srcChild.matrix_parent_inverse.copy()
 			
 			return dst
-		
+
 		modelData = None
-		
+
 		if self.modelInstancing:
 			modelData = self.modelObjects.pop(modelHandle.modelName, None)
 		
@@ -485,6 +498,9 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 				if bone.rotation_mode != 'QUATERNION':
 					bone.rotation_mode = 'QUATERNION'
 						
+			if self.bSkipPhysics:	
+				self.noShared()
+            
 			# Scale:
 			
 			armature.scale[0] = self.global_scale
@@ -505,7 +521,7 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 			modelData.curves = []
 		
 		modelData = self.addCurvesToModel(context, modelData)
-		
+        
 		return modelData
 	
 	def createCamera(self, context, camName):
