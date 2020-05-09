@@ -6,7 +6,7 @@ import copy
 
 import traceback
 
-import bpy, bpy.props, bpy.ops
+import bpy, bpy.props, bpy.ops, time
 import mathutils
 
 from io_scene_valvesource import import_smd as vs_import_smd, utils as vs_utils
@@ -33,6 +33,7 @@ class SmdImporterEx(vs_import_smd.SmdImporter):
 
 	# Custom properties
 	doAnim : bpy.props.BoolProperty(name="importer_doanims", default=True)
+	createCollections : bpy.props.BoolProperty(name="importer_use_collections", description="importer_use_collections_tip", default=False)
 	makeCamera : bpy.props.BoolProperty(name="importer_makecamera",description="importer_makecamera_tip",default=False)
 	append : bpy.props.EnumProperty(name="importer_bones_mode",description="importer_bones_mode_desc",items=(
 		('VALIDATE',"importer_bones_validate","importer_bones_validate_desc"),
@@ -310,7 +311,7 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 		
 	modelInstancing: bpy.props.BoolProperty(
 		name="Model instancing",
-		description="Objects with same model are instanced, animation data is separate and modifiers duplicated (faster).",
+		description="Objects with same model are instanced, animation data is separate and modifiers duplicated (faster). Recommended to disable it for beginners, who want to export it to other 3D application",
 		default=True)
 	
 	# class properties
@@ -318,6 +319,7 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 	blenderCamUpQuat = mathutils.Quaternion((math.cos(0.5 * math.radians(90.0)), math.sin(0.5* math.radians(90.0)), 0.0, 0.0))
 	
 	def execute(self, context):
+		time_start = time.time()
 		try:
 			bpy.utils.register_class(SmdImporterEx)
 			ok = self.readAgr(context)
@@ -333,9 +335,12 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 				space.clip_end = self.global_scale * 56756
 		
 		self.errorReport("Error report")
+        
+		bpy.context.scene.frame_start = 0
+		bpy.context.scene.frame_end = bpy.data.objects["afxCam"].animation_data.action.frame_range[1]
 		
+		print("AGR import finished in %.4f sec." % (time.time() - time_start))
 		return {'FINISHED'}
-		
 	
 	def invoke(self, context, event):
 		bpy.context.window_manager.fileselect_add(self)
