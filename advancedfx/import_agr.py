@@ -320,9 +320,10 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 	
 	def execute(self, context):
 		time_start = time.time()
+		result = None
 		try:
 			bpy.utils.register_class(SmdImporterEx)
-			ok = self.readAgr(context)
+			result = self.readAgr(context)
 		finally:
 			bpy.utils.unregister_class(SmdImporterEx)
 		
@@ -336,8 +337,11 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 		
 		self.errorReport("Error report")
         
-		bpy.context.scene.frame_start = 0
-		bpy.context.scene.frame_end = bpy.data.objects["afxCam"].animation_data.action.frame_range[1]
+		if result is not None:
+			if result['frameBegin'] is not None:
+				bpy.context.scene.frame_start = result['frameBegin']
+			if result['frameEnd'] is not None:
+				bpy.context.scene.frame_end = result['frameEnd']
 		
 		print("AGR import finished in %.4f sec." % (time.time() - time_start))
 		return {'FINISHED'}
@@ -553,6 +557,7 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 	
 	def readAgr(self,context):
 		file = None
+		result = { 'result': False, 'frameBegin': 1, 'frameEnd': None }
 		
 		try:
 			self.modelObjects = {}
@@ -561,7 +566,7 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 			
 			if file is None:
 				self.error('Could not open file.')
-				return False
+				return result
 			
 			file.seek(0, 2)
 			fileSize = file.tell()
@@ -573,11 +578,11 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 			
 			if version is None:
 				self.error('Invalid file format.')
-				return False
+				return result
 				
 			if 4 != version:
 				self.error('Version '+str(version)+' is not supported!')
-				return False
+				return result
 				
 			timeConverter = AgrTimeConverter(context)
 			dict = AgrDictionary()
@@ -799,7 +804,7 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 					
 						if camData is None:
 							self.error("Failed to create camera.")
-							return False
+							return result
 					
 					
 					renderOrigin = ReadVector(file, quakeFormat=True)
@@ -831,8 +836,9 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 				
 				else:
 					self.warning('Unknown packet at '+str(file.tell()))
-					return False
-					
+					return result
+			
+			result['frameEnd'] = int(math.ceil(timeConverter.GetTime()))
 			
 			if 0 < timeConverter.errorCount:
 				self.warning("FPS mismatch was detected %i times. The maximum error was %f. Solution: Make sure to set the Blender project FPS correctly before importing." % (timeConverter.errorCount, timeConverter.maxError))
@@ -843,4 +849,5 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 			if file is not None:
 				file.close()
 		
-		return True
+		result['result'] = True
+		return result

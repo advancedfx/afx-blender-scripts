@@ -4,7 +4,7 @@ You need to install latest Blender Source Tools first
 ( http://steamreview.org/BlenderSourceTools/ ),
 since we depend on it.
 This version of afx-blender-scripts was tested using
-Blender Source Tools 3.0.1.
+Blender Source Tools Blender Source Tools 3.0.3 and 3.1.0.
 
 If you have a previous version of afx-blender-scripts installed, uninstall
 it first through Blender!
@@ -55,6 +55,19 @@ Blender doesn't support proper interpolation of curves for quaternions yet.
 
 
 Changelog:
+
+1.9.8 (2020-05-09T13:01Z) (by Devostated):
+- Support for Blender Source Tools 3.1.0 Test version:
+  - Now it doesn't create collections anymore for cleaner project files, just like it was in Blender 2.79 and below. 
+  - 3.0.3 is still supported!
+- Added Timer:
+  - Now you can see how long the import of the AGR took, for the curious ones.
+- Changed Model instancing option
+  - Changed description text after getting a lot questions about model instancing.
+  - Added an advice for beginners that get confused by model instancing.
+- Added automatic frame range adjustment.
+- Tested with Blender 2.82a
+- Tested with Blender Source Tools 3.0.3 and 3.1.0.
 
 1.9.4 (2020-01-03T13:46Z):
 - Removed "Remove useless meshes" option (by Devostated)
