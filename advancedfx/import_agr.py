@@ -3,6 +3,7 @@ import math
 import os
 import struct
 import copy
+from collections import defaultdict
 
 import traceback
 
@@ -220,7 +221,24 @@ class ModelHandle:
 		self.modelData = False
 		self.lastRenderOrigin = None
 		self.lastRenderRotQuat = None
-	
+
+		# We are lazy, so we use frame 0 to set as not visible (initially) / hide_render 1:
+		self.visibilityFrames = [0, 1]
+		self.locationXFrames = []
+		self.locationYFrames = []
+		self.locationZFrames = []
+		self.rotationWFrames = []
+		self.rotationXFrames = []
+		self.rotationYFrames = []
+		self.rotationZFrames = []
+		self.boneLocationXFrames = defaultdict(list)
+		self.boneLocationYFrames = defaultdict(list)
+		self.boneLocationZFrames = defaultdict(list)
+		self.boneRotationWFrames = defaultdict(list)
+		self.boneRotationXFrames = defaultdict(list)
+		self.boneRotationYFrames = defaultdict(list)
+		self.boneRotationZFrames = defaultdict(list)
+
 #	
 #	def __hash__(self):
 #		return hash((self.handle, self.modelName))
@@ -233,6 +251,15 @@ class CameraData:
 		self.o = o
 		self.c = c
 		self.curves = []
+
+		self.locationXFrames = []
+		self.locationYFrames = []
+		self.locationZFrames = []
+		self.rotationWFrames = []
+		self.rotationXFrames = []
+		self.rotationYFrames = []
+		self.rotationZFrames = []
+		self.lensFrames = []
 
 class AgrTimeConverter:
 	def __init__(self,context):
@@ -362,9 +389,6 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 		a.animation_data.action = action
 		
 		modelData.curves.append(action.fcurves.new("hide_render"))
-		
-		# We are lazy, so we use frame 0 to set as not visible (initially) / hide_render 1:
-		afx_utils.AddKey_Visible(self.interKey, modelData.curves[0].keyframe_points, 0.0, False)
 		
 		for i in range(3):
 			modelData.curves.append(action.fcurves.new("location",index = i))
@@ -585,11 +609,14 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 				return result
 				
 			timeConverter = AgrTimeConverter(context)
+			currentTime = timeConverter.GetTime()
 			dict = AgrDictionary()
 			handleToLastModelHandle = {}
 			unusedModelHandles = []
 			lastCameraQuat = None
 			camData = None
+			
+			modelHandles = []
 			
 			stupidCount = 0
 			
@@ -599,8 +626,8 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 			
 				if 0 < fileSize and 0 == stupidCount % 100:
 					val = float(file.tell())/float(fileSize)
-					context.window_manager.progress_update(val)
-					print("AGR Import %f%%" % (100*val))
+					context.window_manager.progress_update(val * 0.5)
+					print("AGR Read %f%%" % (100*val))
 				
 				stupidCount = stupidCount +1
 				
@@ -618,6 +645,7 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 					frameTime = ReadFloat(file)
 					
 					timeConverter.Frame(frameTime)
+					currentTime = timeConverter.GetTime()
 					
 					afxHiddenOffset = ReadInt(file)
 					if afxHiddenOffset:
@@ -633,9 +661,10 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 								# Make ent invisible:
 								modelData =  modelHandle.modelData
 								if modelData: # this can happen if the model could not be loaded
-									curves = modelData.curves
 									#vs_utils.select_only(modelData.smd.a)
-									afx_utils.AddKey_Visible(self.interKey, curves[0].keyframe_points, timeConverter.GetTime(), False)
+									if self.interKey:
+										afx_utils.AppendInterKeys_Visible(currentTime, 1, modelHandle.visibilityFrames)
+									modelHandle.visibilityFrames.extend((currentTime, 1))
 								
 								unusedModelHandles.append(modelHandle)
 								#print("Marking %i (%s) as hidden/reusable." % (modelHandle.objNr,modelHandle.modelName))
@@ -660,15 +689,17 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 						# Make removed ent invisible:
 						modelData = modelHandle.modelData
 						if modelData: # this can happen if the model could not be loaded
-							curves = modelData.curves
 							#vs_utils.select_only( modelData.smd.a )
-							afx_utils.AddKey_Visible(self.interKey, curves[0].keyframe_points, timeConverter.GetTime(), False)
+							if self.interKey:
+								afx_utils.AppendInterKeys_Visible(currentTime, 1, modelHandle.visibilityFrames)
+							modelHandle.visibilityFrames.extend((currentTime, 1))
 						
 						unusedModelHandles.append(modelHandle)
 						#print("Marking %i (%s) as deleted/reusable." % (modelHandle.objNr,modelHandle.modelName))
 				
 				elif 'entity_state' == node0:
 					visible = None
+					modelHandle = None
 					modelData = None
 					handle = ReadInt(file)
 					if dict.Peekaboo(file,'baseentity'):
@@ -689,9 +720,10 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 							# Switched model, make old model invisible:
 							modelData = modelHandle.modelData
 							if modelData: # this can happen if the model could not be loaded
-								curves = modelData.curves
 								#vs_utils.select_only( modelData.smd.a )
-								afx_utils.AddKey_Visible(self.interKey, curves[0].keyframe_points, timeConverter.GetTime(), False)
+								if self.interKey:
+									afx_utils.AppendInterKeys_Visible(currentTime, 1, modelHandle.visibilityFrames)
+								modelHandle.visibilityFrames.extend((currentTime, 1))
 							
 							modelHandle = None
 						
@@ -717,6 +749,7 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 								objNr = objNr + 1
 								modelHandle = ModelHandle(objNr, modelName)
 								print("Creating %i (%s)." % (modelHandle.objNr,modelHandle.modelName))
+								modelHandles.append(modelHandle)
 							
 							handleToLastModelHandle[handle] = modelHandle
 							
@@ -737,16 +770,25 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 						
 						if modelData is not None:
 							
-							curves = modelData.curves
-							
 							#vs_utils.select_only( modelData.smd.a )
+							invisible = 0 if visible else 1
 							
-							afx_utils.AddKey_Visible(self.interKey, curves[0].keyframe_points, timeConverter.GetTime(), visible)
+							if self.interKey:
+								afx_utils.AppendInterKeys_Visible(currentTime, invisible, modelHandle.visibilityFrames)
+								afx_utils.AppendInterKeys_Location(currentTime, renderOrigin, modelHandle.locationXFrames, modelHandle.locationYFrames, modelHandle.locationZFrames)
+								afx_utils.AppendInterKeys_Rotation(currentTime, renderRotQuat, modelHandle.rotationWFrames, modelHandle.rotationXFrames, modelHandle.rotationYFrames, modelHandle.rotationZFrames)
 							
-							afx_utils.AddKey_Location(self.interKey, curves[1+0].keyframe_points, curves[1+1].keyframe_points, curves[1+2].keyframe_points, timeConverter.GetTime(), renderOrigin)
+							modelHandle.visibilityFrames.extend((currentTime, invisible))
 							
-							afx_utils.AddKey_Rotation(self.interKey, curves[1+3].keyframe_points, curves[1+4].keyframe_points, curves[1+5].keyframe_points, curves[1+6].keyframe_points, timeConverter.GetTime(), renderRotQuat)
-					
+							modelHandle.locationXFrames.extend((currentTime, renderOrigin.x))
+							modelHandle.locationYFrames.extend((currentTime, renderOrigin.y))
+							modelHandle.locationZFrames.extend((currentTime, renderOrigin.z))
+							
+							modelHandle.rotationWFrames.extend((currentTime, renderRotQuat.w))
+							modelHandle.rotationXFrames.extend((currentTime, renderRotQuat.x))
+							modelHandle.rotationYFrames.extend((currentTime, renderRotQuat.y))
+							modelHandle.rotationZFrames.extend((currentTime, renderRotQuat.z))
+							
 					if dict.Peekaboo(file,'baseanimating'):
 						#skin = ReadInt(file)
 						#body = ReadInt(file)
@@ -781,13 +823,20 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 									
 									bone.matrix = matrix
 									
-									curves = modelData.curves
-									
 									#vs_utils.select_only( modelData.smd.a )
 									
-									afx_utils.AddKey_Location(self.interKey, curves[8+i*7+0].keyframe_points, curves[8+i*7+1].keyframe_points, curves[8+i*7+2].keyframe_points, timeConverter.GetTime(), bone.location)
+									if self.interKey:
+										afx_utils.AppendInterKeys_Location(currentTime, bone.location, modelHandle.boneLocationXFrames[i], modelHandle.boneLocationYFrames[i], modelHandle.boneLocationZFrames[i])
+										afx_utils.AppendInterKeys_Rotation(currentTime, bone.rotation_quaternion, modelHandle.boneRotationWFrames[i], modelHandle.boneRotationXFrames[i], modelHandle.boneRotationYFrames[i], modelHandle.boneRotationZFrames[i])
 									
-									afx_utils.AddKey_Rotation(self.interKey, curves[8+i*7+3].keyframe_points, curves[8+i*7+4].keyframe_points, curves[8+i*7+5].keyframe_points, curves[8+i*7+6].keyframe_points, timeConverter.GetTime(), bone.rotation_quaternion)
+									modelHandle.boneLocationXFrames[i].extend((currentTime, bone.location.x))
+									modelHandle.boneLocationYFrames[i].extend((currentTime, bone.location.y))
+									modelHandle.boneLocationZFrames[i].extend((currentTime, bone.location.z))
+									
+									modelHandle.boneRotationWFrames[i].extend((currentTime, bone.rotation_quaternion.w))
+									modelHandle.boneRotationXFrames[i].extend((currentTime, bone.rotation_quaternion.x))
+									modelHandle.boneRotationYFrames[i].extend((currentTime, bone.rotation_quaternion.y))
+									modelHandle.boneRotationZFrames[i].extend((currentTime, bone.rotation_quaternion.z))
 					
 					dict.Peekaboo(file,'/')
 					
@@ -824,19 +873,74 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 							renderRotQuat.negate()
 					lastCameraQuat = renderRotQuat
 					
-					curves = camData.curves
-					
 					#vs_utils.select_only( camData.o )
 					
-					afx_utils.AddKey_Location(self.interKey, curves[0].keyframe_points, curves[1].keyframe_points, curves[2].keyframe_points, timeConverter.GetTime(), renderOrigin)
+					if self.interKey:
+						afx_utils.AppendInterKeys_Location(currentTime, renderOrigin, camData.locationXFrames, camData.locationYFrames, camData.locationZFrames)
+						afx_utils.AppendInterKeys_Rotation(currentTime, renderRotQuat, camData.rotationWFrames, camData.rotationXFrames, camData.rotationYFrames, camData.rotationZFrames)
+						afx_utils.AppendInterKeys_Value(currentTime, lens, camData.lensFrames)
 					
-					afx_utils.AddKey_Rotation(self.interKey, curves[3].keyframe_points, curves[4].keyframe_points, curves[5].keyframe_points, curves[6].keyframe_points, timeConverter.GetTime(), renderRotQuat)
-
-					afx_utils.AddKey_Value(self.interKey, curves[7].keyframe_points, timeConverter.GetTime(), lens)
+					camData.locationXFrames.extend((currentTime, renderOrigin.x))
+					camData.locationYFrames.extend((currentTime, renderOrigin.y))
+					camData.locationZFrames.extend((currentTime, renderOrigin.z))
+					
+					camData.rotationWFrames.extend((currentTime, renderRotQuat.w))
+					camData.rotationXFrames.extend((currentTime, renderRotQuat.x))
+					camData.rotationYFrames.extend((currentTime, renderRotQuat.y))
+					camData.rotationZFrames.extend((currentTime, renderRotQuat.z))
+					
+					camData.lensFrames.extend((currentTime, lens))
 				
 				else:
 					self.warning('Unknown packet at '+str(file.tell()))
 					return result
+			
+			totalFrames = 0
+			for modelHandle in modelHandles:
+				totalFrames += len(modelHandle.visibilityFrames)
+				totalFrames += len(modelHandle.locationXFrames) * 3
+				totalFrames += len(modelHandle.rotationWFrames) * 4
+				for i in modelHandle.boneLocationXFrames:
+					totalFrames += len(modelHandle.boneLocationXFrames[i]) * 3
+					totalFrames += len(modelHandle.boneRotationWFrames[i]) * 4
+			if camData is not None:
+				totalFrames += len(camData.locationXFrames) * 3
+				totalFrames += len(camData.rotationWFrames) * 4
+				totalFrames += len(camData.lensFrames)
+			
+			importedFrames = 0
+			
+			def updateImportProgress(newFrames):
+				nonlocal importedFrames
+				importedFrames += newFrames
+				val = importedFrames / totalFrames
+				print("AGR Import %f%%" % (100*val))
+				context.window_manager.progress_update(0.5 + val * 0.5)
+			
+			for modelHandle in modelHandles:
+				if modelHandle.modelData is None:
+					continue
+				curves = modelHandle.modelData.curves
+				afx_utils.AddKeysList_Visible(curves[0].keyframe_points, modelHandle.visibilityFrames)
+				afx_utils.AddKeysList_Location(curves[1].keyframe_points, curves[2].keyframe_points, curves[3].keyframe_points, modelHandle.locationXFrames, modelHandle.locationYFrames, modelHandle.locationZFrames)
+				afx_utils.AddKeysList_Rotation(curves[4].keyframe_points, curves[5].keyframe_points, curves[6].keyframe_points, curves[7].keyframe_points, modelHandle.rotationWFrames, modelHandle.rotationXFrames, modelHandle.rotationYFrames, modelHandle.rotationZFrames)
+				updateImportProgress(len(modelHandle.visibilityFrames) + len(modelHandle.locationXFrames) * 3 + len(modelHandle.rotationWFrames) * 4)
+				for i in modelHandle.boneLocationXFrames:
+					afx_utils.AddKeysList_Location(curves[7*i+8].keyframe_points, curves[7*i+9].keyframe_points, curves[7*i+10].keyframe_points, modelHandle.boneLocationXFrames[i], modelHandle.boneLocationYFrames[i], modelHandle.boneLocationZFrames[i])
+					updateImportProgress(len(modelHandle.boneLocationXFrames[i]) * 3)
+				for i in modelHandle.boneRotationWFrames:
+					afx_utils.AddKeysList_Rotation(curves[7*i+11].keyframe_points, curves[7*i+12].keyframe_points, curves[7*i+13].keyframe_points, curves[7*i+14].keyframe_points, modelHandle.boneRotationWFrames[i], modelHandle.boneRotationXFrames[i], modelHandle.boneRotationYFrames[i], modelHandle.boneRotationZFrames[i])
+					updateImportProgress(len(modelHandle.boneRotationWFrames[i]) * 4)
+				for curve in curves:
+					curve.update()
+			if camData is not None:
+				curves = camData.curves
+				afx_utils.AddKeysList_Location(curves[0].keyframe_points, curves[1].keyframe_points, curves[2].keyframe_points, camData.locationXFrames, camData.locationYFrames, camData.locationZFrames)
+				afx_utils.AddKeysList_Rotation(curves[3].keyframe_points, curves[4].keyframe_points, curves[5].keyframe_points, curves[6].keyframe_points, camData.rotationWFrames, camData.rotationXFrames, camData.rotationYFrames, camData.rotationZFrames)
+				afx_utils.AddKeysList_Value(curves[7].keyframe_points, camData.lensFrames)
+				updateImportProgress(len(camData.locationXFrames) * 3 + len(camData.rotationWFrames) * 4 + len(camData.lensFrames))
+				for curve in curves:
+					curve.update()
 			
 			result['frameEnd'] = int(math.ceil(timeConverter.GetTime()))
 			
