@@ -221,6 +221,7 @@ class ModelHandle:
 		self.modelData = False
 		self.lastRenderOrigin = None
 		self.lastRenderRotQuat = None
+		self.boneLastRenderRotQuats = {}
 
 		# We are lazy, so we use frame 0 to set as not visible (initially) / hide_render 1:
 		self.visibilityFrames = [0, 1]
@@ -823,20 +824,29 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 									
 									bone.matrix = matrix
 									
+									renderRotQuat = bone.rotation_quaternion.copy()
+									
+									# make sure we take the shortest path:
+									if i in modelHandle.boneLastRenderRotQuats:
+										dot = modelHandle.boneLastRenderRotQuats[i].dot(renderRotQuat)
+										if dot < 0:
+											renderRotQuat.negate()
+									modelHandle.boneLastRenderRotQuats[i] = renderRotQuat
+									
 									#vs_utils.select_only( modelData.smd.a )
 									
 									if self.interKey:
 										afx_utils.AppendInterKeys_Location(currentTime, bone.location, modelHandle.boneLocationXFrames[i], modelHandle.boneLocationYFrames[i], modelHandle.boneLocationZFrames[i])
-										afx_utils.AppendInterKeys_Rotation(currentTime, bone.rotation_quaternion, modelHandle.boneRotationWFrames[i], modelHandle.boneRotationXFrames[i], modelHandle.boneRotationYFrames[i], modelHandle.boneRotationZFrames[i])
+										afx_utils.AppendInterKeys_Rotation(currentTime, renderRotQuat, modelHandle.boneRotationWFrames[i], modelHandle.boneRotationXFrames[i], modelHandle.boneRotationYFrames[i], modelHandle.boneRotationZFrames[i])
 									
 									modelHandle.boneLocationXFrames[i].extend((currentTime, bone.location.x))
 									modelHandle.boneLocationYFrames[i].extend((currentTime, bone.location.y))
 									modelHandle.boneLocationZFrames[i].extend((currentTime, bone.location.z))
 									
-									modelHandle.boneRotationWFrames[i].extend((currentTime, bone.rotation_quaternion.w))
-									modelHandle.boneRotationXFrames[i].extend((currentTime, bone.rotation_quaternion.x))
-									modelHandle.boneRotationYFrames[i].extend((currentTime, bone.rotation_quaternion.y))
-									modelHandle.boneRotationZFrames[i].extend((currentTime, bone.rotation_quaternion.z))
+									modelHandle.boneRotationWFrames[i].extend((currentTime, renderRotQuat.w))
+									modelHandle.boneRotationXFrames[i].extend((currentTime, renderRotQuat.x))
+									modelHandle.boneRotationYFrames[i].extend((currentTime, renderRotQuat.y))
+									modelHandle.boneRotationZFrames[i].extend((currentTime, renderRotQuat.z))
 					
 					dict.Peekaboo(file,'/')
 					
