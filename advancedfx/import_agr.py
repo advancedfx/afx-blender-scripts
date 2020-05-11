@@ -946,12 +946,16 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 				afx_utils.AddKeysList_Location(self.keyframeInterpolation, curves[1].keyframe_points, curves[2].keyframe_points, curves[3].keyframe_points, modelHandle.locationXFrames, modelHandle.locationYFrames, modelHandle.locationZFrames)
 				afx_utils.AddKeysList_Rotation(self.keyframeInterpolation, curves[4].keyframe_points, curves[5].keyframe_points, curves[6].keyframe_points, curves[7].keyframe_points, modelHandle.rotationWFrames, modelHandle.rotationXFrames, modelHandle.rotationYFrames, modelHandle.rotationZFrames)
 				updateImportProgress(len(modelHandle.visibilityFrames) + len(modelHandle.locationXFrames) * 3 + len(modelHandle.rotationWFrames) * 4)
+				currentFrames = 0
 				for i in modelHandle.boneLocationXFrames:
 					afx_utils.AddKeysList_Location(self.keyframeInterpolation, curves[7*i+8].keyframe_points, curves[7*i+9].keyframe_points, curves[7*i+10].keyframe_points, modelHandle.boneLocationXFrames[i], modelHandle.boneLocationYFrames[i], modelHandle.boneLocationZFrames[i])
-					updateImportProgress(len(modelHandle.boneLocationXFrames[i]) * 3)
+					currentFrames += len(modelHandle.boneLocationXFrames[i]) * 3
+				updateImportProgress(currentFrames)
+				currentFrames = 0
 				for i in modelHandle.boneRotationWFrames:
 					afx_utils.AddKeysList_Rotation(self.keyframeInterpolation, curves[7*i+11].keyframe_points, curves[7*i+12].keyframe_points, curves[7*i+13].keyframe_points, curves[7*i+14].keyframe_points, modelHandle.boneRotationWFrames[i], modelHandle.boneRotationXFrames[i], modelHandle.boneRotationYFrames[i], modelHandle.boneRotationZFrames[i])
-					updateImportProgress(len(modelHandle.boneRotationWFrames[i]) * 4)
+					currentFrames += len(modelHandle.boneRotationWFrames[i]) * 4
+				updateImportProgress(currentFrames)
 				for curve in curves:
 					curve.update()
 			if camData is not None:
