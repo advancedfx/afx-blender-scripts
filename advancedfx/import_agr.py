@@ -342,6 +342,17 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 		description="Objects with same model are instanced, animation data is separate and modifiers duplicated (faster). Recommended to disable it for beginners, who want to export it to other 3D application",
 		default=True)
 	
+	keyframeInterpolation: bpy.props.EnumProperty(
+		name="Keyframe interpolation",
+		description="Constant recommended for beginners. Advanced users can choose Bezier for significantly faster import times.",
+		items=[
+			('CONSTANT', "Constant (recommended)", "No interpolation"),
+			('LINEAR', "Linear", "Linear interpolation"),
+			('BEZIER', "Bezier (fast import)", "Smooth interpolation"),
+		],
+		default='CONSTANT'
+	)
+	
 	# class properties
 	valveMatrixToBlender = mathutils.Matrix.Rotation(math.pi/2,4,'Z')
 	blenderCamUpQuat = mathutils.Quaternion((math.cos(0.5 * math.radians(90.0)), math.sin(0.5* math.radians(90.0)), 0.0, 0.0))
@@ -932,22 +943,22 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 					continue
 				curves = modelHandle.modelData.curves
 				afx_utils.AddKeysList_Visible(curves[0].keyframe_points, modelHandle.visibilityFrames)
-				afx_utils.AddKeysList_Location(curves[1].keyframe_points, curves[2].keyframe_points, curves[3].keyframe_points, modelHandle.locationXFrames, modelHandle.locationYFrames, modelHandle.locationZFrames)
-				afx_utils.AddKeysList_Rotation(curves[4].keyframe_points, curves[5].keyframe_points, curves[6].keyframe_points, curves[7].keyframe_points, modelHandle.rotationWFrames, modelHandle.rotationXFrames, modelHandle.rotationYFrames, modelHandle.rotationZFrames)
+				afx_utils.AddKeysList_Location(self.keyframeInterpolation, curves[1].keyframe_points, curves[2].keyframe_points, curves[3].keyframe_points, modelHandle.locationXFrames, modelHandle.locationYFrames, modelHandle.locationZFrames)
+				afx_utils.AddKeysList_Rotation(self.keyframeInterpolation, curves[4].keyframe_points, curves[5].keyframe_points, curves[6].keyframe_points, curves[7].keyframe_points, modelHandle.rotationWFrames, modelHandle.rotationXFrames, modelHandle.rotationYFrames, modelHandle.rotationZFrames)
 				updateImportProgress(len(modelHandle.visibilityFrames) + len(modelHandle.locationXFrames) * 3 + len(modelHandle.rotationWFrames) * 4)
 				for i in modelHandle.boneLocationXFrames:
-					afx_utils.AddKeysList_Location(curves[7*i+8].keyframe_points, curves[7*i+9].keyframe_points, curves[7*i+10].keyframe_points, modelHandle.boneLocationXFrames[i], modelHandle.boneLocationYFrames[i], modelHandle.boneLocationZFrames[i])
+					afx_utils.AddKeysList_Location(self.keyframeInterpolation, curves[7*i+8].keyframe_points, curves[7*i+9].keyframe_points, curves[7*i+10].keyframe_points, modelHandle.boneLocationXFrames[i], modelHandle.boneLocationYFrames[i], modelHandle.boneLocationZFrames[i])
 					updateImportProgress(len(modelHandle.boneLocationXFrames[i]) * 3)
 				for i in modelHandle.boneRotationWFrames:
-					afx_utils.AddKeysList_Rotation(curves[7*i+11].keyframe_points, curves[7*i+12].keyframe_points, curves[7*i+13].keyframe_points, curves[7*i+14].keyframe_points, modelHandle.boneRotationWFrames[i], modelHandle.boneRotationXFrames[i], modelHandle.boneRotationYFrames[i], modelHandle.boneRotationZFrames[i])
+					afx_utils.AddKeysList_Rotation(self.keyframeInterpolation, curves[7*i+11].keyframe_points, curves[7*i+12].keyframe_points, curves[7*i+13].keyframe_points, curves[7*i+14].keyframe_points, modelHandle.boneRotationWFrames[i], modelHandle.boneRotationXFrames[i], modelHandle.boneRotationYFrames[i], modelHandle.boneRotationZFrames[i])
 					updateImportProgress(len(modelHandle.boneRotationWFrames[i]) * 4)
 				for curve in curves:
 					curve.update()
 			if camData is not None:
 				curves = camData.curves
-				afx_utils.AddKeysList_Location(curves[0].keyframe_points, curves[1].keyframe_points, curves[2].keyframe_points, camData.locationXFrames, camData.locationYFrames, camData.locationZFrames)
-				afx_utils.AddKeysList_Rotation(curves[3].keyframe_points, curves[4].keyframe_points, curves[5].keyframe_points, curves[6].keyframe_points, camData.rotationWFrames, camData.rotationXFrames, camData.rotationYFrames, camData.rotationZFrames)
-				afx_utils.AddKeysList_Value(curves[7].keyframe_points, camData.lensFrames)
+				afx_utils.AddKeysList_Location(self.keyframeInterpolation, curves[0].keyframe_points, curves[1].keyframe_points, curves[2].keyframe_points, camData.locationXFrames, camData.locationYFrames, camData.locationZFrames)
+				afx_utils.AddKeysList_Rotation(self.keyframeInterpolation, curves[3].keyframe_points, curves[4].keyframe_points, curves[5].keyframe_points, curves[6].keyframe_points, camData.rotationWFrames, camData.rotationXFrames, camData.rotationYFrames, camData.rotationZFrames)
+				afx_utils.AddKeysList_Value(self.keyframeInterpolation, curves[7].keyframe_points, camData.lensFrames)
 				updateImportProgress(len(camData.locationXFrames) * 3 + len(camData.rotationWFrames) * 4 + len(camData.lensFrames))
 				for curve in curves:
 					curve.update()

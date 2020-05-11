@@ -52,11 +52,12 @@ def AddKey_Value(interKey, keyframe_points, time, value):
 	item.co = [time, value]
 	item.interpolation = 'CONSTANT'
 
-def AddKeysList_Value(keyframe_points, data):
+def AddKeysList_Value(interpolation, keyframe_points, data):
 	keyframe_points.add(len(data) // 2)
 	keyframe_points.foreach_set("co", data)
-	for item in keyframe_points:
-		item.interpolation = 'CONSTANT'
+	if keyframe_points[0].interpolation != interpolation:
+		for item in keyframe_points:
+			item.interpolation = interpolation
 
 def AppendInterKeys_Value(time, value, data):
 	if 0 == len(data):
@@ -135,19 +136,20 @@ def AddKey_Location(interKey, keyframe_points_location_x, keyframe_points_locati
 	itemY.interpolation = 'CONSTANT'
 	itemZ.interpolation = 'CONSTANT'
 	
-def AddKeysList_Location(keyframe_points_x, keyframe_points_y, keyframe_points_z, data_x, data_y, data_z):
+def AddKeysList_Location(interpolation, keyframe_points_x, keyframe_points_y, keyframe_points_z, data_x, data_y, data_z):
 	keyframe_points_x.add(len(data_x) // 2)
 	keyframe_points_x.foreach_set("co", data_x)
-	for item in keyframe_points_x:
-		item.interpolation = 'CONSTANT'
 	keyframe_points_y.add(len(data_y) // 2)
 	keyframe_points_y.foreach_set("co", data_y)
-	for item in keyframe_points_y:
-		item.interpolation = 'CONSTANT'
 	keyframe_points_z.add(len(data_z) // 2)
 	keyframe_points_z.foreach_set("co", data_z)
-	for item in keyframe_points_z:
-		item.interpolation = 'CONSTANT'
+	if keyframe_points_x[0].interpolation != interpolation:
+		for item in keyframe_points_x:
+			item.interpolation = interpolation
+		for item in keyframe_points_y:
+			item.interpolation = interpolation
+		for item in keyframe_points_z:
+			item.interpolation = interpolation
 
 def AppendInterKeys_Location(time, location, data_x, data_y, data_z):
 	if 0 == len(data_x):
@@ -211,23 +213,24 @@ def AddKey_Rotation(interKey, keyframe_points_rotation_quaternion_w, keyframe_po
 	itemY.interpolation = 'CONSTANT'
 	itemZ.interpolation = 'CONSTANT'
 
-def AddKeysList_Rotation(keyframe_points_w, keyframe_points_x, keyframe_points_y, keyframe_points_z, data_w, data_x, data_y, data_z):
+def AddKeysList_Rotation(interpolation, keyframe_points_w, keyframe_points_x, keyframe_points_y, keyframe_points_z, data_w, data_x, data_y, data_z):
 	keyframe_points_w.add(len(data_w) // 2)
 	keyframe_points_w.foreach_set("co", data_w)
-	for item in keyframe_points_w:
-		item.interpolation = 'CONSTANT'
 	keyframe_points_x.add(len(data_x) // 2)
 	keyframe_points_x.foreach_set("co", data_x)
-	for item in keyframe_points_x:
-		item.interpolation = 'CONSTANT'
 	keyframe_points_y.add(len(data_y) // 2)
 	keyframe_points_y.foreach_set("co", data_y)
-	for item in keyframe_points_y:
-		item.interpolation = 'CONSTANT'
 	keyframe_points_z.add(len(data_z) // 2)
 	keyframe_points_z.foreach_set("co", data_z)
-	for item in keyframe_points_z:
-		item.interpolation = 'CONSTANT'
+	if keyframe_points_w[0].interpolation != interpolation:
+		for item in keyframe_points_w:
+			item.interpolation = interpolation
+		for item in keyframe_points_x:
+			item.interpolation = interpolation
+		for item in keyframe_points_y:
+			item.interpolation = interpolation
+		for item in keyframe_points_z:
+			item.interpolation = interpolation
 
 def AppendInterKeys_Rotation(time, rotation, data_w, data_x, data_y, data_z):
 	if 0 == len(data_w):
