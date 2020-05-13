@@ -703,7 +703,7 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 							bestLength = 0
 							
 							for idx,val in enumerate(unusedModelHandles):
-								if (val.modelName == modelName) and ((modelHandle is None) or ((modelHandle.lastRenderOrigin -renderOrigin).length < bestLength)):
+								if (val.modelName == modelName) and ((modelHandle is None) or ((val.lastRenderOrigin -renderOrigin).length < bestLength)):
 									modelHandle = val
 									bestLength = (modelHandle.lastRenderOrigin -renderOrigin).length
 									bestIndex = idx
