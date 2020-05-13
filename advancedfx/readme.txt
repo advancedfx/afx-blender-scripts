@@ -56,6 +56,14 @@ Blender doesn't support proper interpolation of curves for quaternions yet.
 
 Changelog:
 
+1.10.0 (2020-05-13T14:55Z) (by lasa01):
+(Many thanks, also for answering annoying questions about pull-request.)
+- Read agr keyframes into memory and add all at once (faster).
+- Make sure bone rotations take shortest path.
+- User-selectable keyframe interpolation mode (agr): Bezier is much faster than constant but not recommended for beginners that don't get project FPS right 100%.
+- Reduce import logging spam.
+- Fix modelHandle reusing not selecting closest one.
+
 1.9.8 (2020-05-09T13:01Z) (by Devostated):
 - Support for Blender Source Tools 3.1.0 Test version:
   - Now it doesn't create collections anymore for cleaner project files, just like it was in Blender 2.79 and below. 
