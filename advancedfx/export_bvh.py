@@ -88,7 +88,8 @@ class BvhExporter(bpy.types.Operator, vs_utils.Logger):
 		
 		lastRot = None
 		
-		unRot = mathutils.Matrix.Rotation(math.radians(-90.0 if "CAMERA" == obj.type else 0.0), 4, 'X')
+		mRot = mathutils.Matrix.Rotation(math.radians(-90.0 if "CAMERA" == obj.type else 0.0), 4, 'X')
+		mTrans = mathutils.Matrix.Scale(-1,4,(-1.0, 0.0, 0.0))
 		
 		file = None
 		
@@ -107,23 +108,22 @@ class BvhExporter(bpy.types.Operator, vs_utils.Logger):
 				scene.frame_set(frame)
 				
 				mat = obj.matrix_world
-				mat = mat @ unRot
+				mat = mat @ mRot
 				
 				loc = mat.to_translation()
-				rot = mat.to_euler('XZY') if lastRot is None else mat.to_euler('XZY', lastRot)
+				
+				rot = mat.to_euler('YXZ') if lastRot is None else mat.to_euler('YXZ', lastRot)
 				lastRot = rot
 				
-				loc = mathutils.Vector((loc[1],-loc[0],loc[2]))
 				
-				X = -loc[1] * self.global_scale
+				
+				X = -(-loc[0]) * self.global_scale
 				Y =  loc[2] * self.global_scale
-				Z = -loc[0] * self.global_scale
+				Z = -loc[1] * self.global_scale
 				
-				qAngleVec = mathutils.Vector((rot[0],rot[2],rot[1]))
-				
-				ZR = -math.degrees(qAngleVec[2])
-				XR = -math.degrees(qAngleVec[0])
-				YR = math.degrees(qAngleVec[1])
+				XR = -math.degrees(-rot[0])
+				YR =  math.degrees( rot[2])
+				ZR = -math.degrees( rot[1])
 				
 				S = "" +FloatToBvhString(X) +" " +FloatToBvhString(Y) +" " +FloatToBvhString(Z) +" " +FloatToBvhString(ZR) +" " +FloatToBvhString(XR) +" " +FloatToBvhString(YR) + "\n"
 				file.write(S)
