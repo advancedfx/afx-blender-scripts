@@ -56,7 +56,7 @@ Blender doesn't support proper interpolation of curves for quaternions yet.
 
 Changelog:
 
-1.10.2 (2020-05-13T14:55Z):
+1.10.2 (2020-05-22T16:54Z):
 - Fixed BVH Export.
 
 1.10.0 (2020-05-13T14:55Z) (by lasa01):
