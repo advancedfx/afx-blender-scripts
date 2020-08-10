@@ -72,6 +72,7 @@ class SmdImporterEx(vs_import_smd.SmdImporter):
 		else:
 			return super().readSMD(filepath, upAxis, rotMode, newscene, smd_type, target_layer) # call parent method
 
+
 def ReadString(file):
 	buf = bytearray()
 	while True:
@@ -378,12 +379,7 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 				space.clip_end = self.global_scale * 56756
 		
 		self.errorReport("Error report")
-  
-		# Remove Models that shouldn't exist
-		#for CurrMdl in bpy.data.objects
-		#	CurrHideRender = CurrMdl.animation_data.action.fcurves[0].keyframe_points
-		#	if 
-
+        
 		if result is not None:
 			if result['frameBegin'] is not None:
 				bpy.context.scene.frame_start = result['frameBegin']
