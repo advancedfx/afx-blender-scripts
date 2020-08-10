@@ -65,9 +65,7 @@ class SmdImporterEx(vs_import_smd.SmdImporter):
 		super(SmdImporterEx, self).readShapes()
         
 	def readSMD(self, filepath, upAxis, rotMode, newscene = False, smd_type = None, target_layer = 0):
-		if SmdImporterEx.bSkipPhysics and smd_type == vs_utils.PHYS:
-			return 0
-		if splitext(basename(filepath))[0].rstrip("123456789").endswith("_lod"):  # skip lod meshes
+		if SmdImporterEx.bSkipPhysics and (smd_type == vs_utils.PHYS or splitext(basename(filepath))[0].rstrip("123456789").endswith("_lod")):
 			return 0
 		else:
 			return super().readSMD(filepath, upAxis, rotMode, newscene, smd_type, target_layer) # call parent method
