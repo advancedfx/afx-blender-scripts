@@ -10,6 +10,8 @@ import traceback
 import bpy, bpy.props, bpy.ops, time
 import mathutils
 
+from os.path import splitext, basename
+
 from io_scene_valvesource import import_smd as vs_import_smd, utils as vs_utils
 
 from advancedfx import utils as afx_utils
@@ -65,9 +67,10 @@ class SmdImporterEx(vs_import_smd.SmdImporter):
 	def readSMD(self, filepath, upAxis, rotMode, newscene = False, smd_type = None, target_layer = 0):
 		if SmdImporterEx.bSkipPhysics and smd_type == vs_utils.PHYS:
 			return 0
+		if splitext(basename(filepath))[0].rstrip("123456789").endswith("_lod"):  # skip lod meshes
+			return 0
 		else:
 			return super().readSMD(filepath, upAxis, rotMode, newscene, smd_type, target_layer) # call parent method
-
 
 def ReadString(file):
 	buf = bytearray()
@@ -327,7 +330,7 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 	)
 	
 	bSkipPhysics: bpy.props.BoolProperty(
-		name="Skip Physic Meshes",
+		name="Skip Physic and LOD Meshes",
 		description="Skips the import of physic (collision) meshes if the .qc contains them.",
 		default = True
 	)
@@ -375,7 +378,12 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 				space.clip_end = self.global_scale * 56756
 		
 		self.errorReport("Error report")
-        
+  
+		# Remove Models that shouldn't exist
+		#for CurrMdl in bpy.data.objects
+		#	CurrHideRender = CurrMdl.animation_data.action.fcurves[0].keyframe_points
+		#	if 
+
 		if result is not None:
 			if result['frameBegin'] is not None:
 				bpy.context.scene.frame_start = result['frameBegin']
@@ -497,10 +505,9 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 		if modelData is None:
 			# No instance we are allowed to use, so import it for real:
 		
-			filePath = self.assetPath.rstrip("/\\") + "/" +modelHandle.modelName
+			filePath = self.assetPath.rstrip("/\\") + "/" +modelHandle.modelName.lower()
 			filePath = os.path.splitext(filePath)[0]
-			filePath = filePath + "/" + os.path.basename(filePath) + ".qc"
-			filePath = filePath.replace("/", "\\")
+			filePath = filePath + "/" + os.path.basename(filePath).lower() + ".qc"
 			
 			SmdImporterEx.bSkipPhysics = self.bSkipPhysics
 			GAgrImporter.smd = None

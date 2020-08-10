@@ -4,7 +4,7 @@ You need to install latest Blender Source Tools first
 ( http://steamreview.org/BlenderSourceTools/ ),
 since we depend on it.
 This version of afx-blender-scripts was tested using
-Blender Source Tools Blender Source Tools 3.0.3 and 3.1.0.
+Blender Source Tools 3.1.0.
 
 If you have a previous version of afx-blender-scripts installed, uninstall
 it first through Blender!
@@ -55,6 +55,10 @@ Blender doesn't support proper interpolation of curves for quaternions yet.
 
 
 Changelog:
+
+1.10.4 (2020-08-10T09:10Z):
+- skip LOD meshes for Team Fortress 2. Thanks to @Lasa01 for using his code
+- fixed a character issue for Linux. Thanks to @AgenteDog for doing it real quick
 
 1.10.2 (2020-05-22T16:54Z):
 - Fixed BVH Export.
