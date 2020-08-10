@@ -25,7 +25,7 @@ class SmdImporterEx(vs_import_smd.SmdImporter):
 	
 	qc = None
 	smd = None
-	bSkipPhysics = False
+	bSkip = False
 
 	# Properties used by the file browser
 	filepath : bpy.props.StringProperty(name="File Path", description="File filepath used for importing the SMD/VTA/DMX/QC file", maxlen=1024, default="", options={'HIDDEN'})
@@ -65,7 +65,7 @@ class SmdImporterEx(vs_import_smd.SmdImporter):
 		super(SmdImporterEx, self).readShapes()
         
 	def readSMD(self, filepath, upAxis, rotMode, newscene = False, smd_type = None, target_layer = 0):
-		if SmdImporterEx.bSkipPhysics and (smd_type == vs_utils.PHYS or splitext(basename(filepath))[0].rstrip("123456789").endswith("_lod")):
+		if SmdImporterEx.bSkip and (smd_type == vs_utils.PHYS or splitext(basename(filepath))[0].rstrip("123456789").endswith("_lod")):
 			return 0
 		else:
 			return super().readSMD(filepath, upAxis, rotMode, newscene, smd_type, target_layer) # call parent method
@@ -328,7 +328,7 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 		default=False,
 	)
 	
-	bSkipPhysics: bpy.props.BoolProperty(
+	bSkip: bpy.props.BoolProperty(
 		name="Skip Physic and LOD Meshes",
 		description="Skips the import of physic (collision) meshes if the .qc contains them.",
 		default = True
@@ -503,7 +503,7 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 			filePath = os.path.splitext(filePath)[0]
 			filePath = filePath + "/" + os.path.basename(filePath).lower() + ".qc"
 			
-			SmdImporterEx.bSkipPhysics = self.bSkipPhysics
+			SmdImporterEx.bSkip = self.bSkip
 			GAgrImporter.smd = None
 			GAgrImporter.onlyBones = self.onlyBones
 			modelData = None
