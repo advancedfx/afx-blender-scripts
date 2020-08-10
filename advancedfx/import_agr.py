@@ -497,10 +497,9 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 		if modelData is None:
 			# No instance we are allowed to use, so import it for real:
 		
-			filePath = self.assetPath.rstrip("/\\") + "/" +modelHandle.modelName
+			filePath = self.assetPath.rstrip("/\\") + "/" +modelHandle.modelName.lower()
 			filePath = os.path.splitext(filePath)[0]
-			filePath = filePath + "/" + os.path.basename(filePath) + ".qc"
-			filePath = filePath.replace("/", "\\")
+			filePath = filePath + "/" + os.path.basename(filePath).lower() + ".qc"
 			
 			SmdImporterEx.bSkipPhysics = self.bSkipPhysics
 			GAgrImporter.smd = None
