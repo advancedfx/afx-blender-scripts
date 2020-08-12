@@ -56,6 +56,9 @@ Blender doesn't support proper interpolation of curves for quaternions yet.
 
 Changelog:
 
+1.11.0 (2020-08-11T19:28Z):
+- Updated HLAE AGR Import to agr version 5
+
 1.10.4 (2020-08-10T09:21Z):
 - skip LOD meshes for Team Fortress 2. Thanks to @Lasa01 for using his code
 - fixed a character issue for Linux. Thanks to @AgenteDog for doing it real quick
