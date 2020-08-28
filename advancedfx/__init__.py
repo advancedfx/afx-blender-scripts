@@ -21,14 +21,14 @@ classes = (
 	import_cam.CamImporter,
 	export_cam.CamExporter,
 	import_agr.AgrImporter,
-    export_agr2fbx.AgrExport,
+	export_agr2fbx.AgrExport,
 )
 
 def menu_func_import_agr(self, context):
 	self.layout.operator(import_agr.AgrImporter.bl_idname, text="HLAE afxGameRecord (.agr)")
 
 def menu_func_export_agr2fbx(self, context):
-    self.layout.operator(export_agr2fbx.AgrExport.bl_idname, text="HLAE AGR Batch Export (.fbx)")
+	self.layout.operator(export_agr2fbx.AgrExport.bl_idname, text="HLAE AGR Batch Export (.fbx)")
 
 def menu_func_import_cam(self, context):
 	self.layout.operator(import_cam.CamImporter.bl_idname, text="HLAE Camera IO (.cam)")
