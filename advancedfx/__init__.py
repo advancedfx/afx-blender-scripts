@@ -3,17 +3,17 @@ import bpy
 bl_info = {
 	"name": "advancedfx Blender Scripts",
 	"author": "advancedfx.org",
-	"version": (1, 11, 0),
+	"version": (1, 11, 2),
 	"blender": (2, 80, 0),
 	"location": "File > Import/Export",
 	"description": "For inter-operation with HLAE.",
 	#"warning": "",
-	#"wiki_url": "",
-	#"tracker_url": "",
+	"wiki_url": "https://github.com/advancedfx/advancedfx/wiki/Source:mirv_agr",
+	"tracker_url": "https://github.com/advancedfx/afx-blender-scripts/issues",
 	"category": "Import-Export",
 }
 
-from . import utils, import_agr, import_cam, export_cam, import_bvh, export_bvh
+from . import utils, import_agr, import_cam, export_cam, import_bvh, export_bvh, export_agr2fbx
 
 classes = (
 	import_bvh.BvhImporter,
@@ -21,11 +21,15 @@ classes = (
 	import_cam.CamImporter,
 	export_cam.CamExporter,
 	import_agr.AgrImporter,
+	export_agr2fbx.AgrExport,
 )
 
 def menu_func_import_agr(self, context):
 	self.layout.operator(import_agr.AgrImporter.bl_idname, text="HLAE afxGameRecord (.agr)")
-	
+
+def menu_func_export_agr2fbx(self, context):
+	self.layout.operator(export_agr2fbx.AgrExport.bl_idname, text="HLAE AGR Batch Export (.fbx)")
+
 def menu_func_import_cam(self, context):
 	self.layout.operator(import_cam.CamImporter.bl_idname, text="HLAE Camera IO (.cam)")
 
@@ -44,6 +48,7 @@ def register():
 		register_class(cls)
 	
 	bpy.types.TOPBAR_MT_file_import.append(menu_func_import_agr)
+	bpy.types.TOPBAR_MT_file_export.append(menu_func_export_agr2fbx)
 	bpy.types.TOPBAR_MT_file_import.append(menu_func_import_cam)
 	bpy.types.TOPBAR_MT_file_export.append(menu_func_export_cam)
 	bpy.types.TOPBAR_MT_file_import.append(menu_func_import_bvh)
@@ -57,6 +62,7 @@ def unregister():
 	bpy.types.TOPBAR_MT_file_export.remove(menu_func_export_bvh)
 	bpy.types.TOPBAR_MT_file_import.remove(menu_func_import_bvh)
 	bpy.types.TOPBAR_MT_file_import.remove(menu_func_import_agr)
+	bpy.types.TOPBAR_MT_file_export.remove(menu_func_export_agr2fbx)
 
 if __name__ == "__main__":
 	unregister()
