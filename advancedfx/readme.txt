@@ -52,9 +52,18 @@ Notice:
 The interpolation is set to CONSTANT for everything, because
 Blender doesn't support proper interpolation of curves for quaternions yet.
 
+For more informations visit it's Advancedfx Wiki page ( https://github.com/advancedfx/advancedfx/wiki/Source:mirv_agr )
 
 
 Changelog:
+
+1.11.2 (2020-08-22T23:11Z):
+- added "Documentation" button
+- added "Report a Bug" button
+- added AGR batch .FBX export 
+
+1.11.0 (2020-08-11T19:28Z):
+- Updated HLAE AGR Import to agr version 5
 
 1.10.4 (2020-08-10T09:21Z):
 - skip LOD meshes for Team Fortress 2. Thanks to @Lasa01 for using his code
