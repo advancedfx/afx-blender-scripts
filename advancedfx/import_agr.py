@@ -224,6 +224,8 @@ class ModelHandle:
 		self.lastRenderOrigin = None
 		self.lastRenderRotQuat = None
 		self.boneLastRenderRotQuats = {}
+		self.camData = None
+		self.lastCameraQuat = None
 
 		# We are lazy, so we use frame 0 to set as not visible (initially) / hide_render 1:
 		self.visibilityFrames = [0, 1]
@@ -617,7 +619,7 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 				self.error('Invalid file format.')
 				return result
 				
-			if 4 != version:
+			if 5 != version:
 				self.error('Version '+str(version)+' is not supported!')
 				return result
 				
@@ -860,6 +862,45 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 									modelHandle.boneRotationYFrames[i].extend((currentTime, renderRotQuat.y))
 									modelHandle.boneRotationZFrames[i].extend((currentTime, renderRotQuat.z))
 					
+					if dict.Peekaboo(file,'camera'):
+						thidPerson = ReadBool(file)
+						pos = ReadVector(file, quakeFormat=True)
+						rot = ReadQAngle(file)
+						fov = ReadFloat(file)
+						
+						modelCamData = modelHandle.camData
+						if modelHandle.camData is None:
+							modelCamData = self.createCamera(context,"camera."+str(modelHandle.objNr))
+							modelHandle.camData = modelCamData
+						
+						lens = modelCamData.c.sensor_width / (2.0 * math.tan(math.radians(fov) / 2.0))
+						
+						renderOrigin = pos * self.global_scale
+						renderRotQuat = rot.to_quaternion() @ self.blenderCamUpQuat
+						
+						# make sure we take the shortest path:
+						if modelHandle.lastCameraQuat is not None:
+							dot = modelHandle.lastCameraQuat.dot(renderRotQuat)
+							if dot < 0:
+								renderRotQuat.negate()
+						modelHandle.lastCameraQuat = renderRotQuat
+						
+						if self.interKey:
+							afx_utils.AppendInterKeys_Location(currentTime, renderOrigin, modelCamData.locationXFrames, modelCamData.locationYFrames, modelCamData.locationZFrames)
+							afx_utils.AppendInterKeys_Rotation(currentTime, renderRotQuat, modelCamData.rotationWFrames, modelCamData.rotationXFrames, modelCamData.rotationYFrames, modelCamData.rotationZFrames)
+							afx_utils.AppendInterKeys_Value(currentTime, lens, modelCamData.lensFrames)
+						
+						modelCamData.locationXFrames.extend((currentTime, renderOrigin.x))
+						modelCamData.locationYFrames.extend((currentTime, renderOrigin.y))
+						modelCamData.locationZFrames.extend((currentTime, renderOrigin.z))
+						
+						modelCamData.rotationWFrames.extend((currentTime, renderRotQuat.w))
+						modelCamData.rotationXFrames.extend((currentTime, renderRotQuat.x))
+						modelCamData.rotationYFrames.extend((currentTime, renderRotQuat.y))
+						modelCamData.rotationZFrames.extend((currentTime, renderRotQuat.z))
+						
+						modelCamData.lensFrames.extend((currentTime, lens))
+					
 					dict.Peekaboo(file,'/')
 					
 					viewModel = ReadBool(file)
@@ -919,6 +960,11 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 			
 			totalFrames = 0
 			for modelHandle in modelHandles:
+				modelCamData = modelHandle.camData
+				if modelCamData is not None:
+					totalFrames += len(modelCamData.locationXFrames) * 3
+					totalFrames += len(modelCamData.rotationWFrames) * 4
+					totalFrames += len(modelCamData.lensFrames)
 				totalFrames += len(modelHandle.visibilityFrames)
 				totalFrames += len(modelHandle.locationXFrames) * 3
 				totalFrames += len(modelHandle.rotationWFrames) * 4
@@ -940,6 +986,15 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 				context.window_manager.progress_update(0.5 + val * 0.5)
 			
 			for modelHandle in modelHandles:
+				modelCamData = modelHandle.camData
+				if modelCamData is not None:
+					curves = modelCamData.curves
+					afx_utils.AddKeysList_Location(self.keyframeInterpolation, curves[0].keyframe_points, curves[1].keyframe_points, curves[2].keyframe_points, modelCamData.locationXFrames, modelCamData.locationYFrames, modelCamData.locationZFrames)
+					afx_utils.AddKeysList_Rotation(self.keyframeInterpolation, curves[3].keyframe_points, curves[4].keyframe_points, curves[5].keyframe_points, curves[6].keyframe_points, modelCamData.rotationWFrames, modelCamData.rotationXFrames, modelCamData.rotationYFrames, modelCamData.rotationZFrames)
+					afx_utils.AddKeysList_Value(self.keyframeInterpolation, curves[7].keyframe_points, modelCamData.lensFrames)
+					updateImportProgress(len(modelCamData.locationXFrames) * 3 + len(modelCamData.rotationWFrames) * 4 + len(modelCamData.lensFrames))
+					for curve in curves:
+						curve.update()
 				if modelHandle.modelData is None:
 					continue
 				curves = modelHandle.modelData.curves
