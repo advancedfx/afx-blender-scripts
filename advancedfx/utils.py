@@ -1,6 +1,8 @@
 import mathutils
 import math
+import bpy
 
+NEWER_THAN_290 = bpy.app.version >= (2, 90, 0)
 
 class QAngle:
 	def __init__(self,x,y,z):
@@ -56,8 +58,12 @@ def AddKeysList_Value(interpolation, keyframe_points, data):
 	keyframe_points.add(len(data) // 2)
 	keyframe_points.foreach_set("co", data)
 	if keyframe_points[0].interpolation != interpolation:
-		for item in keyframe_points:
-			item.interpolation = interpolation
+		if NEWER_THAN_290:
+			interpolation_value = bpy.types.Keyframe.bl_rna.properties["interpolation"].enum_items[interpolation].value
+			keyframe_points.foreach_set("interpolation", [interpolation_value] * len(keyframe_points))
+		else:
+			for item in keyframe_points:
+				item.interpolation = interpolation
 
 def AppendInterKeys_Value(time, value, data):
 	if 0 == len(data):
@@ -89,8 +95,12 @@ def AddKey_Visible(interKey, keyframe_points_hide_render, time, visible):
 def AddKeysList_Visible(keyframe_points, data):
 	keyframe_points.add(len(data) // 2)
 	keyframe_points.foreach_set("co", data)
-	for item in keyframe_points:
-		item.interpolation = 'CONSTANT'
+	if NEWER_THAN_290:
+		interpolation_value = bpy.types.Keyframe.bl_rna.properties["interpolation"].enum_items['CONSTANT'].value
+		keyframe_points.foreach_set("interpolation", [interpolation_value] * len(keyframe_points))
+	else:
+		for item in keyframe_points:
+			item.interpolation = 'CONSTANT'
 
 def AppendInterKeys_Visible(time, invisible, data):
 	if 0 == len(data):
@@ -144,12 +154,18 @@ def AddKeysList_Location(interpolation, keyframe_points_x, keyframe_points_y, ke
 	keyframe_points_z.add(len(data_z) // 2)
 	keyframe_points_z.foreach_set("co", data_z)
 	if keyframe_points_x[0].interpolation != interpolation:
-		for item in keyframe_points_x:
-			item.interpolation = interpolation
-		for item in keyframe_points_y:
-			item.interpolation = interpolation
-		for item in keyframe_points_z:
-			item.interpolation = interpolation
+		if NEWER_THAN_290:
+			interpolation_value = bpy.types.Keyframe.bl_rna.properties["interpolation"].enum_items[interpolation].value
+			keyframe_points_x.foreach_set("interpolation", [interpolation_value] * len(keyframe_points_x))
+			keyframe_points_y.foreach_set("interpolation", [interpolation_value] * len(keyframe_points_y))
+			keyframe_points_z.foreach_set("interpolation", [interpolation_value] * len(keyframe_points_z))
+		else:
+			for item in keyframe_points_x:
+				item.interpolation = interpolation
+			for item in keyframe_points_y:
+				item.interpolation = interpolation
+			for item in keyframe_points_z:
+				item.interpolation = interpolation
 
 def AppendInterKeys_Location(time, location, data_x, data_y, data_z):
 	if 0 == len(data_x):
@@ -223,14 +239,21 @@ def AddKeysList_Rotation(interpolation, keyframe_points_w, keyframe_points_x, ke
 	keyframe_points_z.add(len(data_z) // 2)
 	keyframe_points_z.foreach_set("co", data_z)
 	if keyframe_points_w[0].interpolation != interpolation:
-		for item in keyframe_points_w:
-			item.interpolation = interpolation
-		for item in keyframe_points_x:
-			item.interpolation = interpolation
-		for item in keyframe_points_y:
-			item.interpolation = interpolation
-		for item in keyframe_points_z:
-			item.interpolation = interpolation
+		if NEWER_THAN_290:
+			interpolation_value = bpy.types.Keyframe.bl_rna.properties["interpolation"].enum_items[interpolation].value
+			keyframe_points_w.foreach_set("interpolation", [interpolation_value] * len(keyframe_points_w))
+			keyframe_points_x.foreach_set("interpolation", [interpolation_value] * len(keyframe_points_x))
+			keyframe_points_y.foreach_set("interpolation", [interpolation_value] * len(keyframe_points_y))
+			keyframe_points_z.foreach_set("interpolation", [interpolation_value] * len(keyframe_points_z))
+		else:
+			for item in keyframe_points_w:
+				item.interpolation = interpolation
+			for item in keyframe_points_x:
+				item.interpolation = interpolation
+			for item in keyframe_points_y:
+				item.interpolation = interpolation
+			for item in keyframe_points_z:
+				item.interpolation = interpolation
 
 def AppendInterKeys_Rotation(time, rotation, data_w, data_x, data_y, data_z):
 	if 0 == len(data_w):

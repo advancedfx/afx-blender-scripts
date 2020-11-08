@@ -348,11 +348,11 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 	
 	keyframeInterpolation: bpy.props.EnumProperty(
 		name="Keyframe interpolation",
-		description="Constant recommended for beginners. Advanced users can choose Bezier for significantly faster import times.",
+		description="Constant recommended for beginners." if afx_utils.NEWER_THAN_290 else "Constant recommended for beginners. Advanced users can choose Bezier for significantly faster import times.",
 		items=[
 			('CONSTANT', "Constant (recommended)", "No interpolation"),
 			('LINEAR', "Linear", "Linear interpolation"),
-			('BEZIER', "Bezier (fast import)", "Smooth interpolation"),
+			('BEZIER', "Bezier" if afx_utils.NEWER_THAN_290 else "Bezier (fast import)", "Smooth interpolation"),
 		],
 		default='CONSTANT'
 	)
