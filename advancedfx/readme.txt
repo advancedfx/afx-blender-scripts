@@ -57,6 +57,9 @@ For more informations visit it's Advancedfx Wiki page ( https://github.com/advan
 
 Changelog:
 
+1.12.0 (2020-09-11T06:30Z):
+- Use faster foreach_set for keyframe interpolation in 2.90+. Thanks to @Lasa01.
+
 1.11.2 (2020-08-28T21:19Z):
 - added "Documentation" button
 - added "Report a Bug" button
