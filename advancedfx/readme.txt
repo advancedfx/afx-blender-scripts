@@ -50,6 +50,9 @@ For more informations visit it's Advancedfx Wiki page ( https://github.com/advan
 
 Changelog:
 
+1.12.1 (2020-01-25T15:07Z):
+- Fix BST becoming unusable after using AGR importer. Thanks to @Lasa01.
+
 1.12.0 (2020-09-11T06:30Z):
 - Use faster foreach_set for keyframe interpolation in 2.90+. Thanks to @Lasa01.
 
