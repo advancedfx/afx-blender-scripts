@@ -19,13 +19,6 @@ options!
 
 
 
-Known problems:
-
-Using the AGR Import menu entry causes the Blender Source Tools import menu
-entry not to function anymore until you restart Blender!
-
-
-
 Usage:
 
 Always make sure to select the correct render properties in your project first

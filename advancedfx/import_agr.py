@@ -365,10 +365,12 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 		time_start = time.time()
 		result = None
 		try:
+			bpy.utils.unregister_class(vs_import_smd.SmdImporter)
 			bpy.utils.register_class(SmdImporterEx)
 			result = self.readAgr(context)
 		finally:
 			bpy.utils.unregister_class(SmdImporterEx)
+			bpy.utils.register_class(vs_import_smd.SmdImporter)
 		
 		for area in context.screen.areas:
 			if area.type == 'VIEW_3D':
