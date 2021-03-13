@@ -50,6 +50,9 @@ For more informations visit it's Advancedfx Wiki page ( https://github.com/advan
 
 Changelog:
 
+1.12.2 (2020-03-13T13:35Z):
+- Fixed camera FOV not being animated porperly.
+
 1.12.1 (2020-01-25T15:07Z):
 - Fix BST becoming unusable after using AGR importer. Thanks to @Lasa01.
 

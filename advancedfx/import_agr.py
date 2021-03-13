@@ -561,9 +561,8 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 	
 	def createCamera(self, context, camName):
 		
-		camBData = bpy.data.cameras.new(camName)
-		o = bpy.data.objects.new(camName, camBData)
-		c = bpy.data.cameras[o.name]
+		c = bpy.data.cameras.new(camName)
+		o = bpy.data.objects.new(camName, c)
 
 		context.scene.collection.objects.link(o)
 
