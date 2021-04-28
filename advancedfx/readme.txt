@@ -50,6 +50,11 @@ For more informations visit it's Advancedfx Wiki page ( https://github.com/advan
 
 Changelog:
 
+1.12.5 (2020-04-28T21:03Z):
+- added support for Blender 3.0 Alpha
+- fixed changing Root Bone Name
+- fixed camera scale export
+
 1.12.2 (2020-03-13T13:35Z):
 - Fixed camera FOV not being animated porperly.
 
