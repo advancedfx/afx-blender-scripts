@@ -300,7 +300,6 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 	
 	# Properties used by the file browser
 	filepath: bpy.props.StringProperty(subtype="FILE_PATH")
-	filename_ext: ".agr"
 	filter_glob: bpy.props.StringProperty(default="*.agr", options={'HIDDEN'})
 
 	# Custom properties	

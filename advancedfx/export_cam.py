@@ -27,7 +27,6 @@ class CamExporter(bpy.types.Operator, vs_utils.Logger):
 	
 	# Properties used by the file browser
 	filepath: bpy.props.StringProperty(subtype="FILE_PATH")
-	filename_ext: ".cam"
 	filter_glob: bpy.props.StringProperty(default="*.cam", options={'HIDDEN'})
 
 	# Custom properties
