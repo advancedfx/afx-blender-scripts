@@ -50,7 +50,10 @@ For more informations visit it's Advancedfx Wiki page ( https://github.com/advan
 
 Changelog:
 
-1.12.6 (2021-08-31T17:17Z):
+1.12.7 (2021-08-31T16:04Z):
+- fixed decal_e sticker skipping
+
+1.12.6 (2021-08-31T15:17Z):
 - added skip import option for Stattrack and Stickers
 - added skip import for shared_player_skeleton to Skip Physic and LOD Meshes
 
