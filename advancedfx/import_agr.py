@@ -518,7 +518,7 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 			modelData = None
 
 			try:
-				if self.aSkip and any(filePath.endswith(a) for a in ("stattrack.qc", "decal_a.qc", "decal_b.qc", "decal_c.qc", "decal_d.qc", "decal_e")):
+				if self.aSkip and any(filePath.endswith(a) for a in ("stattrack.qc", "decal_a.qc", "decal_b.qc", "decal_c.qc", "decal_d.qc", "decal_e.qc")):
 					return
 				bpy.ops.advancedfx.smd_importer_ex(filepath=filePath, doAnim=False)
 				modelData = ModelData(GAgrImporter.smd)
