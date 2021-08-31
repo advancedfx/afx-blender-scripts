@@ -53,7 +53,7 @@ class SmdImporterEx(vs_import_smd.SmdImporter):
 		self.readQC(self.filepath, False, False, False, 'XYZ', outer_qc = True)
 		GAgrImporter.smd = self.smd
 		return {'FINISHED'}
-		
+	
 	def readPolys(self):
 		if GAgrImporter.onlyBones:
 			return
@@ -63,13 +63,13 @@ class SmdImporterEx(vs_import_smd.SmdImporter):
 		if GAgrImporter.onlyBones:
 			return
 		super(SmdImporterEx, self).readShapes()
-        
+	
 	def readSMD(self, filepath, upAxis, rotMode, newscene = False, smd_type = None, target_layer = 0):
-		if SmdImporterEx.bSkip and (smd_type == vs_utils.PHYS or splitext(basename(filepath))[0].rstrip("123456789").endswith("_lod")):
+		s = splitext(basename(filepath))[0].rstrip("123456789")
+		if SmdImporterEx.bSkip and (smd_type == vs_utils.PHYS or s.endswith("_lod") or any(filepath.endswith(u) for u in ("skeleto.smd", "skel.smd"))):
 			return 0
 		else:
 			return super().readSMD(filepath, upAxis, rotMode, newscene, smd_type, target_layer) # call parent method
-
 
 def ReadString(file):
 	buf = bytearray()
@@ -330,11 +330,17 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 	)
 	
 	bSkip: bpy.props.BoolProperty(
-		name="Skip Physic and LOD Meshes",
+		name="Skip Physic, LOD and Shared_Player_Skeleton meshes",
 		description="Skips the import of physic (collision) meshes if the .qc contains them.",
 		default = True
 	)
-
+	
+	aSkip: bpy.props.BoolProperty(
+		name="Skip Stattrack and Stickers",
+		description="Skips the import of Stattrack and Sticker meshes if the .qc contains them.",
+		default = True
+	)
+	
 	onlyBones: bpy.props.BoolProperty(
 		name="Bones (skeleton) only",
 		description="Import only bones (skeletons) (faster).",
@@ -510,8 +516,10 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 			GAgrImporter.smd = None
 			GAgrImporter.onlyBones = self.onlyBones
 			modelData = None
-			
+
 			try:
+				if self.aSkip and any(filePath.endswith(a) for a in ("stattrack.qc", "decal_a.qc", "decal_b.qc", "decal_c.qc", "decal_d.qc", "decal_e")):
+					return
 				bpy.ops.advancedfx.smd_importer_ex(filepath=filePath, doAnim=False)
 				modelData = ModelData(GAgrImporter.smd)
 			except Exception as e:
