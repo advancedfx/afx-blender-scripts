@@ -582,7 +582,7 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 			o.rotation_mode = 'QUATERNION'
 				
 		
-		# Create actions and their curves (boobs):
+		# Create actions and their curves:
 		
 		o.animation_data_create()
 		action = bpy.data.actions.new(name="game_data")

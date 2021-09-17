@@ -50,6 +50,13 @@ For more informations visit it's Advancedfx Wiki page ( https://github.com/advan
 
 Changelog:
 
+1.13.0 (2021-09-17T05:17Z):
+- HLAE Camera IO (.cam):
+  - Added version 2 support for to import.
+  - Adjusted import to understand how HLAE mixes up the scaleFov for version 1 and fixed bugs.
+  - Updated export to version 2.
+  - Import now sets frame_begin and frame_end.
+
 1.12.7 (2021-08-31T16:04Z):
 - fixed decal_e sticker skipping
 

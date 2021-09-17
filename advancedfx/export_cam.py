@@ -14,8 +14,7 @@ def FloatToBvhString(value):
 
 def WriteHeader(file, frames, frameTime):
 	file.write("advancedfx Cam\n")
-	file.write("version 1\n")
-	file.write("scaleFov none\n")
+	file.write("version 2\n")
 	file.write("channels time xPosition yPosition zPositon xRotation yRotation zRotation fov\n")
 	file.write("DATA\n")
 

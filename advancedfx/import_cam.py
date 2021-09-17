@@ -19,16 +19,13 @@ def ReadLineWords(file):
 	return words
 
 def AlienSwarm_FovScaling(width, height, fov):
-	
 	if 0 == height:
 		return fov
-	
-	engineAspectRatio = width / height;
-	defaultAscpectRatio = 4.0 / 3.0;
-	ratio = engineAspectRatio / defaultAscpectRatio;
-	halfAngle = 0.5 * fov * (2.0 * math.pi / 360.0);
-	t = ratio * math.tan(halfAngle);
-	return 2.0 * math.atan(t) / (2.0 *  math.pi / 360.0);
+	engineAspectRatio = width / height
+	defaultAscpectRatio = 4.0 / 3.0
+	ratio = engineAspectRatio / defaultAscpectRatio
+	t = ratio * math.tan(math.radians(0.5 * fov))
+	return 2.0 * math.degrees(math.atan(t))
 
 class CameraData:
 	def __init__(self,o,c):
@@ -76,9 +73,8 @@ class CamImporter(bpy.types.Operator, vs_utils.Logger):
 	
 	def createCamera(self, context, camName):
 		
-		camBData = bpy.data.cameras.new(camName)
-		o = bpy.data.objects.new(camName, camBData)
-		c = bpy.data.cameras[o.name]
+		c = bpy.data.cameras.new(camName)
+		o = bpy.data.objects.new(camName, c)
 
 		context.scene.collection.objects.link(o)
 
@@ -91,7 +87,7 @@ class CamImporter(bpy.types.Operator, vs_utils.Logger):
 			o.rotation_mode = 'QUATERNION'
 				
 		
-		# Create actions and their curves (boobs):
+		# Create actions and their curves:
 		
 		o.animation_data_create()
 		action = bpy.data.actions.new(name="game_data")
@@ -108,27 +104,16 @@ class CamImporter(bpy.types.Operator, vs_utils.Logger):
 		c.animation_data.action = action
 			
 		camData.curves.append(action.fcurves.new("lens"))
-			
-		return camData
-	
-	# <returns> Camera FOV in radians </returns>
-	def calcCameraFov(self):
-		fov = math.radians(self.cameraFov)
-	
-		if self.scaleFov:
-			defaultAspectRatio = 4.0/3.0
-			engineAspectRatio = (self.screenWidth / self.screenHeight) if 0 != self.screenHeight else defaultAspectRatio
-			ratio = engineAspectRatio / defaultAspectRatio
-			halfAngle = fov * 0.5
-			fov = math.atan(math.tan(halfAngle) * ratio) * 2.0
 		
-		return fov
+		return camData
 	
 	def readCam(self, context):
 		fps = context.scene.render.fps
 		
 		width = context.scene.render.pixel_aspect_x * context.scene.render.resolution_x
 		height = context.scene.render.pixel_aspect_y * context.scene.render.resolution_y
+		
+		frame_end = None
 		
 		camData = self.createCamera(context,"afxCam")
 		
@@ -144,7 +129,7 @@ class CamImporter(bpy.types.Operator, vs_utils.Logger):
 			file = open(self.filepath, 'rU')
 			
 			version = 0
-			scaleFov = 'none'
+			scaleFov = ''
 			
 			words = ReadLineWords(file)
 			
@@ -163,11 +148,11 @@ class CamImporter(bpy.types.Operator, vs_utils.Logger):
 					if 'scaleFov' == words[0] and 2 <= len(words):
 						scaleFov = words[1]
 			
-			if(1 != version):
-				self.error("Invalid version, only 1 is supported.")
+			if(version < 1 or version > 2):
+				self.error("Invalid version, only 1 - 2 are supported.")
 				return False
 				
-			if not(scaleFov in ['none', 'alienSwarm']):
+			if not(scaleFov in ['','none', 'alienSwarm']):
 				self.error("Unsupported scaleFov value.")
 				return False
 
@@ -191,6 +176,8 @@ class CamImporter(bpy.types.Operator, vs_utils.Logger):
 				
 				time = 1.0 + time * fps
 				
+				frame_end = int(math.ceil(time))
+				
 				renderOrigin = mathutils.Vector((-float(words[2]),float(words[1]),float(words[3]))) * self.global_scale
 				qAngle = afx_utils.QAngle(float(words[5]),float(words[6]),float(words[4]))
 				
@@ -206,7 +193,8 @@ class CamImporter(bpy.types.Operator, vs_utils.Logger):
 				
 				fov = float(words[7])
 				
-				if 'alienSwarm' == scaleFov:
+				# none and alienSwarm was confused in version 1, version 2 always outputs real fov and doesn't have scaleFov.
+				if 'none' == scaleFov:
 					fov = AlienSwarm_FovScaling(width, height, fov)
 				
 				lens = camData.c.sensor_width / (2.0 * math.tan(math.radians(fov) / 2.0))
@@ -218,6 +206,10 @@ class CamImporter(bpy.types.Operator, vs_utils.Logger):
 				afx_utils.AddKey_Rotation(self.interKey, curves[0+3].keyframe_points, curves[0+4].keyframe_points, curves[0+5].keyframe_points, curves[0+6].keyframe_points, time, quat)
 				
 				afx_utils.AddKey_Value(self.interKey, curves[0+7].keyframe_points, time, lens)
+				
+			if frame_end is not None:
+				bpy.context.scene.frame_start = 1
+				bpy.context.scene.frame_end = frame_end
 			
 		finally:
 			if file is not None:
