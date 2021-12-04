@@ -1,22 +1,9 @@
 # Thanks to Darkhandrob for doing the base function
 # https://github.com/darkhandrob
 
-
-import gc
-import math
-import os
-import struct
-
-import traceback
-
 import bpy, bpy.props, bpy.ops, time
-import mathutils
 
-from io_scene_valvesource import import_smd as vs_import_smd, utils as vs_utils
-
-from advancedfx import utils as afx_utils
-
-class AgrExport(bpy.types.Operator, vs_utils.Logger):
+class AgrExport(bpy.types.Operator):
 	"""Exports every models with its animation as a FBX"""
 	bl_idname = "advancedfx.agr_to_fbx"
 	bl_label = "HLAE afxGameRecord"
@@ -26,7 +13,7 @@ class AgrExport(bpy.types.Operator, vs_utils.Logger):
 	
 	global_scale: bpy.props.FloatProperty(
 		name="Scale",
-		description="Scale everything by this value (0.01 default, 0.0254 is more accurate)",
+		description="Scale everything by this value",
 		min=0.000001, max=100000.0,
 		soft_min=0.1, soft_max=10.0,
 		default=1,
@@ -76,6 +63,7 @@ class AgrExport(bpy.types.Operator, vs_utils.Logger):
 						filepath = fullfiles, 
 						object_types={'ARMATURE'}, 
 						use_selection = True, 
+						global_scale =  self.global_scale, 
 						bake_anim_use_nla_strips = False, 
 						bake_anim_use_all_actions = False, 
 						bake_anim_simplify_factor = 0,
@@ -84,7 +72,8 @@ class AgrExport(bpy.types.Operator, vs_utils.Logger):
 					bpy.ops.export_scene.fbx(
 						filepath = fullfiles,
 						object_types={'ARMATURE', 'MESH'},
-						use_selection = True, 
+						use_selection = True,
+						global_scale =  self.global_scale, 
 						bake_anim_use_nla_strips = False, 
 						bake_anim_use_all_actions = False, 
 						bake_anim_simplify_factor = 0,
@@ -108,6 +97,7 @@ class AgrExport(bpy.types.Operator, vs_utils.Logger):
 					filepath = fullfiles, 
 					object_types={'CAMERA'}, 
 					use_selection = True, 
+					global_scale =  self.global_scale, 
 					bake_anim_use_nla_strips = False, 
 					bake_anim_use_all_actions = False, 
 					bake_anim_simplify_factor = 0)
