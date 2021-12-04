@@ -50,7 +50,7 @@ For more informations visit it's Advancedfx Wiki page ( https://github.com/advan
 
 Changelog:
 
-1.13.1 (2021-12-04T13:32Z):
+1.13.1 (2021-12-04T06:32Z):
 - fixed scale of HLAE AGR Batch Export (.fbx)
 
 1.13.0 (2021-09-17T05:17Z):
