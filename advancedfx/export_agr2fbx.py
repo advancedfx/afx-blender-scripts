@@ -13,7 +13,7 @@ class AgrExport(bpy.types.Operator):
 	
 	global_scale: bpy.props.FloatProperty(
 		name="Scale",
-		description="Scale everything by this value (0.01 default, 0.0254 is more accurate)",
+		description="Scale everything by this value",
 		min=0.000001, max=100000.0,
 		soft_min=0.1, soft_max=10.0,
 		default=1,
