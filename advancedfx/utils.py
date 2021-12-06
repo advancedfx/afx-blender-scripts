@@ -55,6 +55,8 @@ def AddKey_Value(interKey, keyframe_points, time, value):
 	item.interpolation = 'CONSTANT'
 
 def AddKeysList_Value(interpolation, keyframe_points, data):
+	if len(data) < 2:
+		return
 	keyframe_points.add(len(data) // 2)
 	keyframe_points.foreach_set("co", data)
 	if keyframe_points[0].interpolation != interpolation:
@@ -147,6 +149,8 @@ def AddKey_Location(interKey, keyframe_points_location_x, keyframe_points_locati
 	itemZ.interpolation = 'CONSTANT'
 	
 def AddKeysList_Location(interpolation, keyframe_points_x, keyframe_points_y, keyframe_points_z, data_x, data_y, data_z):
+	if len(data_x) < 2:
+		return
 	keyframe_points_x.add(len(data_x) // 2)
 	keyframe_points_x.foreach_set("co", data_x)
 	keyframe_points_y.add(len(data_y) // 2)
@@ -230,6 +234,8 @@ def AddKey_Rotation(interKey, keyframe_points_rotation_quaternion_w, keyframe_po
 	itemZ.interpolation = 'CONSTANT'
 
 def AddKeysList_Rotation(interpolation, keyframe_points_w, keyframe_points_x, keyframe_points_y, keyframe_points_z, data_w, data_x, data_y, data_z):
+	if len(data_w) < 2:
+		return
 	keyframe_points_w.add(len(data_w) // 2)
 	keyframe_points_w.foreach_set("co", data_w)
 	keyframe_points_x.add(len(data_x) // 2)

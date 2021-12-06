@@ -178,7 +178,7 @@ def ReadAgrVersion(file):
 
 class AgrDictionary:
 	def __init__(self):
-		self.dict = {}
+		self.dictionary = {}
 		self.peeked = None
 	
 	def Read(self,file):
@@ -196,10 +196,10 @@ class AgrDictionary:
 			str = ReadString(file)
 			if str is None:
 				return None
-			self.dict[len(self.dict)] = str
+			self.dictionary[len(self.dictionary)] = str
 			return str
 			
-		return self.dict[idx]
+		return self.dictionary[idx]
 		
 	def Peekaboo(self,file,what):
 		if self.peeked is None:
@@ -225,7 +225,12 @@ class ModelHandle:
 		self.lastRenderRotQuat = None
 		self.boneLastRenderRotQuats = {}
 		self.camData = None
-		self.lastCameraQuat = None
+		
+		self.lastTime = None
+		self.visible = None
+		self.location = None
+		self.rotation = None
+		self.bones = None
 
 		# We are lazy, so we use frame 0 to set as not visible (initially) / hide_render 1:
 		self.visibilityFrames = [0, 1]
@@ -243,6 +248,90 @@ class ModelHandle:
 		self.boneRotationXFrames = defaultdict(list)
 		self.boneRotationYFrames = defaultdict(list)
 		self.boneRotationZFrames = defaultdict(list)
+	
+	def UpdateVisible(self,curTime,visible,interKey):
+		self.Update(curTime,interKey)
+		self.visible = visible
+	
+	def UpdateLocation(self,curTime,location,interKey):
+		self.Update(curTime,interKey)
+		self.location = location
+		
+	def UpdateRotation(self,curTime,rotation,interKey):
+		self.Update(curTime,interKey)
+		self.rotation = rotation
+	
+	def UpdateBones(self,curTime,bones,interKey):
+		self.Update(curTime,interKey)
+		self.bones = bones
+	
+	def Update(self,curTime,interKey):
+		if((self.lastTime is not None) and ((curTime is None) or (self.lastTime < curTime))):
+			
+			if self.visible is not None:
+				if interKey:
+					afx_utils.AppendInterKeys_Visible(self.lastTime, 0 if self.visible else 1, self.visibilityFrames)
+				self.visibilityFrames.extend((self.lastTime, 0 if self.visible else 1))
+			
+			if self.location is not None:
+			
+				self.lastRenderOrigin = self.location
+			
+				if interKey:
+					afx_utils.AppendInterKeys_Location(self.lastTime, self.location, self.locationXFrames, self.locationYFrames, self.locationZFrames)
+				self.locationXFrames.extend((self.lastTime, self.location.x))
+				self.locationYFrames.extend((self.lastTime, self.location.y))
+				self.locationZFrames.extend((self.lastTime, self.location.z))
+			
+			if self.rotation is not None:
+			
+				# make sure we take the shortest path:
+				if self.lastRenderRotQuat is not None:
+					dot = self.lastRenderRotQuat.dot(self.rotation)
+					if dot < 0:
+						self.rotation.negate()
+				self.lastRenderRotQuat = self.rotation
+			
+				if interKey:
+					afx_utils.AppendInterKeys_Rotation(self.lastTime, self.rotation, self.rotationWFrames, self.rotationXFrames, self.rotationYFrames, self.rotationZFrames)
+				self.rotationWFrames.extend((self.lastTime, self.rotation.w))
+				self.rotationXFrames.extend((self.lastTime, self.rotation.x))
+				self.rotationYFrames.extend((self.lastTime, self.rotation.y))
+				self.rotationZFrames.extend((self.lastTime, self.rotation.z))
+				
+			if self.bones is not None:
+				for idx,i in enumerate(self.bones):
+					
+					bone = self.bones[i]
+					
+					renderRotQuat = bone.rotation_quaternion.copy()
+					
+					# make sure we take the shortest path:
+					if i in self.boneLastRenderRotQuats:
+						dot = self.boneLastRenderRotQuats[i].dot(renderRotQuat)
+						if dot < 0:
+							renderRotQuat.negate()
+					self.boneLastRenderRotQuats[i] = renderRotQuat
+					
+					if interKey:
+						afx_utils.AppendInterKeys_Location(self.lastTime, bone.location, self.boneLocationXFrames[i], self.boneLocationYFrames[i], self.boneLocationZFrames[i])
+						afx_utils.AppendInterKeys_Rotation(self.lastTime, renderRotQuat, self.boneRotationWFrames[i], self.boneRotationXFrames[i], self.boneRotationYFrames[i], self.boneRotationZFrames[i])
+					
+					self.boneLocationXFrames[i].extend((self.lastTime, bone.location.x))
+					self.boneLocationYFrames[i].extend((self.lastTime, bone.location.y))
+					self.boneLocationZFrames[i].extend((self.lastTime, bone.location.z))
+					
+					self.boneRotationWFrames[i].extend((self.lastTime, renderRotQuat.w))
+					self.boneRotationXFrames[i].extend((self.lastTime, renderRotQuat.x))
+					self.boneRotationYFrames[i].extend((self.lastTime, renderRotQuat.y))
+					self.boneRotationZFrames[i].extend((self.lastTime, renderRotQuat.z))
+			
+			self.visible = None
+			self.location = None
+			self.rotation = None
+			self.bones = None
+		
+		self.lastTime = curTime
 
 #	
 #	def __hash__(self):
@@ -256,7 +345,15 @@ class CameraData:
 		self.o = o
 		self.c = c
 		self.curves = []
+		
+		self.lastRenderOrigin = None
+		self.lastRenderRotQuat = None
 
+		self.lastTime = None
+		self.lens = None
+		self.location = None
+		self.rotation = None
+		
 		self.locationXFrames = []
 		self.locationYFrames = []
 		self.locationZFrames = []
@@ -265,6 +362,59 @@ class CameraData:
 		self.rotationYFrames = []
 		self.rotationZFrames = []
 		self.lensFrames = []
+		
+	def UpdateLens(self,curTime,lens,interKey):
+		self.Update(curTime,interKey)
+		self.lens = lens
+	
+	def UpdateLocation(self,curTime,location,interKey):
+		self.Update(curTime,interKey)
+		self.location = location
+		
+	def UpdateRotation(self,curTime,rotation,interKey):
+		self.Update(curTime,interKey)
+		self.rotation = rotation
+	
+	def Update(self,curTime,interKey):
+		if((self.lastTime is not None) and ((curTime is None) or (self.lastTime < curTime))):
+			
+			if self.lens is not None:
+				if interKey:
+					afx_utils.AppendInterKeys_Value(self.lastTime, self.lens, self.lensFrames)
+
+				self.lensFrames.extend((self.lastTime, self.lens))
+			
+			if self.location is not None:
+			
+				self.lastRenderOrigin = self.location
+			
+				if interKey:
+					afx_utils.AppendInterKeys_Location(self.lastTime, self.location, self.locationXFrames, self.locationYFrames, self.locationZFrames)
+				self.locationXFrames.extend((self.lastTime, self.location.x))
+				self.locationYFrames.extend((self.lastTime, self.location.y))
+				self.locationZFrames.extend((self.lastTime, self.location.z))
+			
+			if self.rotation is not None:
+			
+				# make sure we take the shortest path:
+				if self.lastRenderRotQuat is not None:
+					dot = self.lastRenderRotQuat.dot(self.rotation)
+					if dot < 0:
+						self.rotation.negate()
+				self.lastRenderRotQuat = self.rotation
+			
+				if interKey:
+					afx_utils.AppendInterKeys_Rotation(self.lastTime, self.rotation, self.rotationWFrames, self.rotationXFrames, self.rotationYFrames, self.rotationZFrames)
+				self.rotationWFrames.extend((self.lastTime, self.rotation.w))
+				self.rotationXFrames.extend((self.lastTime, self.rotation.x))
+				self.rotationYFrames.extend((self.lastTime, self.rotation.y))
+				self.rotationZFrames.extend((self.lastTime, self.rotation.z))
+			
+			self.lens = None
+			self.location = None
+			self.rotation = None
+		
+		self.lastTime = curTime
 
 class AgrTimeConverter:
 	def __init__(self,context):
@@ -432,7 +582,7 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 			for j in range(4):
 				modelData.curves.append(action.fcurves.new(bone_string + "rotation_quaternion",index = j))
 				
-		# Create visiblity driver:
+		# Create visibility driver:
 		
 		for child in a.children:
 			d = child.driver_add('hide_render').driver
@@ -633,10 +783,9 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 				
 			timeConverter = AgrTimeConverter(context)
 			currentTime = timeConverter.GetTime()
-			dict = AgrDictionary()
+			dictionary = AgrDictionary()
 			handleToLastModelHandle = {}
 			unusedModelHandles = []
-			lastCameraQuat = None
 			camData = None
 			
 			modelHandles = []
@@ -659,7 +808,7 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 					gc.collect()
 					#break
 				
-				node0 = dict.Read(file)
+				node0 = dictionary.Read(file)
 				
 				if node0 is None:
 					break
@@ -684,10 +833,7 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 								# Make ent invisible:
 								modelData =  modelHandle.modelData
 								if modelData: # this can happen if the model could not be loaded
-									#vs_utils.select_only(modelData.smd.a)
-									if self.interKey:
-										afx_utils.AppendInterKeys_Visible(currentTime, 1, modelHandle.visibilityFrames)
-									modelHandle.visibilityFrames.extend((currentTime, 1))
+									modelHandle.UpdateVisible(currentTime, False, self.interKey)
 								
 								unusedModelHandles.append(modelHandle)
 								#print("Marking %i (%s) as hidden/reusable." % (modelHandle.objNr,modelHandle.modelName))
@@ -706,28 +852,24 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 				
 				elif 'deleted' == node0:
 					handle = ReadInt(file)
-					
 					modelHandle = handleToLastModelHandle.pop(handle, None)
 					if modelHandle is not None:
 						# Make removed ent invisible:
 						modelData = modelHandle.modelData
 						if modelData: # this can happen if the model could not be loaded
-							#vs_utils.select_only( modelData.smd.a )
-							if self.interKey:
-								afx_utils.AppendInterKeys_Visible(currentTime, 1, modelHandle.visibilityFrames)
-							modelHandle.visibilityFrames.extend((currentTime, 1))
+							modelHandle.UpdateVisible(currentTime, False, self.interKey)
 						
 						unusedModelHandles.append(modelHandle)
-						#print("Marking %i (%s) as deleted/reusable." % (modelHandle.objNr,modelHandle.modelName))
+						#print("Marking %i (%s) as deleted/reusable." % (modelHandle.objNr,modelHandle.modelName)
 				
 				elif 'entity_state' == node0:
 					visible = None
 					modelHandle = None
 					modelData = None
 					handle = ReadInt(file)
-					if dict.Peekaboo(file,'baseentity'):
+					if dictionary.Peekaboo(file,'baseentity'):
 						
-						modelName = dict.Read(file)
+						modelName = dictionary.Read(file)
 						
 						visible = ReadBool(file)
 						
@@ -743,10 +885,7 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 							# Switched model, make old model invisible:
 							modelData = modelHandle.modelData
 							if modelData: # this can happen if the model could not be loaded
-								#vs_utils.select_only( modelData.smd.a )
-								if self.interKey:
-									afx_utils.AppendInterKeys_Visible(currentTime, 1, modelHandle.visibilityFrames)
-								modelHandle.visibilityFrames.extend((currentTime, 1))
+								modelHandle.UpdateVisible(currentTime, False, self.interKey)
 							
 							modelHandle = None
 						
@@ -758,9 +897,9 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 							bestLength = 0
 							
 							for idx,val in enumerate(unusedModelHandles):
-								if (val.modelName == modelName) and ((modelHandle is None) or ((val.lastRenderOrigin -renderOrigin).length < bestLength)):
+								if (val.modelName == modelName) and ((modelHandle is None) or val.lastRenderOrigin is None or ((val.lastRenderOrigin -renderOrigin).length < bestLength)):
 									modelHandle = val
-									bestLength = (modelHandle.lastRenderOrigin -renderOrigin).length
+									bestLength = 0 if val.lastRenderOrigin is None else (val.lastRenderOrigin -renderOrigin).length
 									bestIndex = idx
 							
 							if modelHandle is not None:
@@ -775,15 +914,6 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 								modelHandles.append(modelHandle)
 							
 							handleToLastModelHandle[handle] = modelHandle
-							
-						modelHandle.lastRenderOrigin = renderOrigin
-						
-						# make sure we take the shortest path:
-						if modelHandle.lastRenderRotQuat is not None:
-							dot = modelHandle.lastRenderRotQuat.dot(renderRotQuat)
-							if dot < 0:
-								renderRotQuat.negate()
-						modelHandle.lastRenderRotQuat = renderRotQuat
 						
 						modelData = modelHandle.modelData
 						if modelData is False:
@@ -792,33 +922,19 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 							modelHandle.modelData = modelData
 						
 						if modelData is not None:
-							
-							#vs_utils.select_only( modelData.smd.a )
-							invisible = 0 if visible else 1
-							
-							if self.interKey:
-								afx_utils.AppendInterKeys_Visible(currentTime, invisible, modelHandle.visibilityFrames)
-								afx_utils.AppendInterKeys_Location(currentTime, renderOrigin, modelHandle.locationXFrames, modelHandle.locationYFrames, modelHandle.locationZFrames)
-								afx_utils.AppendInterKeys_Rotation(currentTime, renderRotQuat, modelHandle.rotationWFrames, modelHandle.rotationXFrames, modelHandle.rotationYFrames, modelHandle.rotationZFrames)
-							
-							modelHandle.visibilityFrames.extend((currentTime, invisible))
-							
-							modelHandle.locationXFrames.extend((currentTime, renderOrigin.x))
-							modelHandle.locationYFrames.extend((currentTime, renderOrigin.y))
-							modelHandle.locationZFrames.extend((currentTime, renderOrigin.z))
-							
-							modelHandle.rotationWFrames.extend((currentTime, renderRotQuat.w))
-							modelHandle.rotationXFrames.extend((currentTime, renderRotQuat.x))
-							modelHandle.rotationYFrames.extend((currentTime, renderRotQuat.y))
-							modelHandle.rotationZFrames.extend((currentTime, renderRotQuat.z))
-							
-					if dict.Peekaboo(file,'baseanimating'):
+							modelHandle.UpdateVisible(currentTime, visible, self.interKey)
+							modelHandle.UpdateLocation(currentTime, renderOrigin, self.interKey)
+							modelHandle.UpdateRotation(currentTime, renderRotQuat, self.interKey)
+						
+					if dictionary.Peekaboo(file,'baseanimating'):
 						#skin = ReadInt(file)
 						#body = ReadInt(file)
 						#sequence  = ReadInt(file)
 						hasBoneList = ReadBool(file)
 						if hasBoneList:
 							numBones = ReadInt(file)
+							
+							bones = {}
 							
 							for i in range(numBones):
 								#pos = file.tell()
@@ -846,31 +962,11 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 									
 									bone.matrix = matrix
 									
-									renderRotQuat = bone.rotation_quaternion.copy()
+									bones[i] = bone
 									
-									# make sure we take the shortest path:
-									if i in modelHandle.boneLastRenderRotQuats:
-										dot = modelHandle.boneLastRenderRotQuats[i].dot(renderRotQuat)
-										if dot < 0:
-											renderRotQuat.negate()
-									modelHandle.boneLastRenderRotQuats[i] = renderRotQuat
-									
-									#vs_utils.select_only( modelData.smd.a )
-									
-									if self.interKey:
-										afx_utils.AppendInterKeys_Location(currentTime, bone.location, modelHandle.boneLocationXFrames[i], modelHandle.boneLocationYFrames[i], modelHandle.boneLocationZFrames[i])
-										afx_utils.AppendInterKeys_Rotation(currentTime, renderRotQuat, modelHandle.boneRotationWFrames[i], modelHandle.boneRotationXFrames[i], modelHandle.boneRotationYFrames[i], modelHandle.boneRotationZFrames[i])
-									
-									modelHandle.boneLocationXFrames[i].extend((currentTime, bone.location.x))
-									modelHandle.boneLocationYFrames[i].extend((currentTime, bone.location.y))
-									modelHandle.boneLocationZFrames[i].extend((currentTime, bone.location.z))
-									
-									modelHandle.boneRotationWFrames[i].extend((currentTime, renderRotQuat.w))
-									modelHandle.boneRotationXFrames[i].extend((currentTime, renderRotQuat.x))
-									modelHandle.boneRotationYFrames[i].extend((currentTime, renderRotQuat.y))
-									modelHandle.boneRotationZFrames[i].extend((currentTime, renderRotQuat.z))
+							modelHandle.UpdateBones(currentTime,bones,self.interKey)
 					
-					if dict.Peekaboo(file,'camera'):
+					if dictionary.Peekaboo(file,'camera'):
 						thidPerson = ReadBool(file)
 						pos = ReadVector(file, quakeFormat=True)
 						rot = ReadQAngle(file)
@@ -886,30 +982,11 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 						renderOrigin = pos * self.global_scale
 						renderRotQuat = rot.to_quaternion() @ self.blenderCamUpQuat
 						
-						# make sure we take the shortest path:
-						if modelHandle.lastCameraQuat is not None:
-							dot = modelHandle.lastCameraQuat.dot(renderRotQuat)
-							if dot < 0:
-								renderRotQuat.negate()
-						modelHandle.lastCameraQuat = renderRotQuat
-						
-						if self.interKey:
-							afx_utils.AppendInterKeys_Location(currentTime, renderOrigin, modelCamData.locationXFrames, modelCamData.locationYFrames, modelCamData.locationZFrames)
-							afx_utils.AppendInterKeys_Rotation(currentTime, renderRotQuat, modelCamData.rotationWFrames, modelCamData.rotationXFrames, modelCamData.rotationYFrames, modelCamData.rotationZFrames)
-							afx_utils.AppendInterKeys_Value(currentTime, lens, modelCamData.lensFrames)
-						
-						modelCamData.locationXFrames.extend((currentTime, renderOrigin.x))
-						modelCamData.locationYFrames.extend((currentTime, renderOrigin.y))
-						modelCamData.locationZFrames.extend((currentTime, renderOrigin.z))
-						
-						modelCamData.rotationWFrames.extend((currentTime, renderRotQuat.w))
-						modelCamData.rotationXFrames.extend((currentTime, renderRotQuat.x))
-						modelCamData.rotationYFrames.extend((currentTime, renderRotQuat.y))
-						modelCamData.rotationZFrames.extend((currentTime, renderRotQuat.z))
-						
-						modelCamData.lensFrames.extend((currentTime, lens))
+						modelCamData.UpdateLens(currentTime, lens, self.interKey)
+						modelCamData.UpdateLocation(currentTime, renderOrigin, self.interKey)
+						modelCamData.UpdateRotation(currentTime, renderRotQuat, self.interKey)
 					
-					dict.Peekaboo(file,'/')
+					dictionary.Peekaboo(file,'/')
 					
 					viewModel = ReadBool(file)
 					
@@ -937,30 +1014,9 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 					renderOrigin = renderOrigin * self.global_scale
 					renderRotQuat = renderAngles.to_quaternion() @ self.blenderCamUpQuat
 					
-					# make sure we take the shortest path:
-					if lastCameraQuat is not None:
-						dot = lastCameraQuat.dot(renderRotQuat)
-						if dot < 0:
-							renderRotQuat.negate()
-					lastCameraQuat = renderRotQuat
-					
-					#vs_utils.select_only( camData.o )
-					
-					if self.interKey:
-						afx_utils.AppendInterKeys_Location(currentTime, renderOrigin, camData.locationXFrames, camData.locationYFrames, camData.locationZFrames)
-						afx_utils.AppendInterKeys_Rotation(currentTime, renderRotQuat, camData.rotationWFrames, camData.rotationXFrames, camData.rotationYFrames, camData.rotationZFrames)
-						afx_utils.AppendInterKeys_Value(currentTime, lens, camData.lensFrames)
-					
-					camData.locationXFrames.extend((currentTime, renderOrigin.x))
-					camData.locationYFrames.extend((currentTime, renderOrigin.y))
-					camData.locationZFrames.extend((currentTime, renderOrigin.z))
-					
-					camData.rotationWFrames.extend((currentTime, renderRotQuat.w))
-					camData.rotationXFrames.extend((currentTime, renderRotQuat.x))
-					camData.rotationYFrames.extend((currentTime, renderRotQuat.y))
-					camData.rotationZFrames.extend((currentTime, renderRotQuat.z))
-					
-					camData.lensFrames.extend((currentTime, lens))
+					camData.UpdateLens(currentTime, lens, self.interKey)
+					camData.UpdateLocation(currentTime, renderOrigin, self.interKey)
+					camData.UpdateRotation(currentTime, renderRotQuat, self.interKey)
 				
 				else:
 					self.warning('Unknown packet at '+str(file.tell()))
@@ -968,8 +1024,10 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 			
 			totalFrames = 0
 			for modelHandle in modelHandles:
+				modelHandle.Update(None,self.interKey) #finish lingering updates
 				modelCamData = modelHandle.camData
 				if modelCamData is not None:
+					modelCamData.Update(None,self.interKey) #finish lingering updates
 					totalFrames += len(modelCamData.locationXFrames) * 3
 					totalFrames += len(modelCamData.rotationWFrames) * 4
 					totalFrames += len(modelCamData.lensFrames)
@@ -980,6 +1038,7 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 					totalFrames += len(modelHandle.boneLocationXFrames[i]) * 3
 					totalFrames += len(modelHandle.boneRotationWFrames[i]) * 4
 			if camData is not None:
+				camData.Update(None,self.interKey) #finish lingering updates
 				totalFrames += len(camData.locationXFrames) * 3
 				totalFrames += len(camData.rotationWFrames) * 4
 				totalFrames += len(camData.lensFrames)
