@@ -50,6 +50,10 @@ For more informations visit it's Advancedfx Wiki page ( https://github.com/advan
 
 Changelog:
 
+1.13.3 (2021-12-12T11:54Z):
+- added a setting to adjust Blenders Frame Rate on import
+- minor code adjustments
+
 1.13.2 (2021-12-06T22:11Z):
 - fix keyframes when there's multiple updates for same thing during a frame.
 

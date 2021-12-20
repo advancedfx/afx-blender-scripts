@@ -25,7 +25,7 @@ class SmdImporterEx(vs_import_smd.SmdImporter):
 	
 	qc = None
 	smd = None
-	bSkip = False
+	smdSkip = False
 
 	# Properties used by the file browser
 	filepath : bpy.props.StringProperty(name="File Path", description="File filepath used for importing the SMD/VTA/DMX/QC file", maxlen=1024, default="", options={'HIDDEN'})
@@ -66,7 +66,7 @@ class SmdImporterEx(vs_import_smd.SmdImporter):
 	
 	def readSMD(self, filepath, upAxis, rotMode, newscene = False, smd_type = None, target_layer = 0):
 		s = splitext(basename(filepath))[0].rstrip("123456789")
-		if SmdImporterEx.bSkip and (smd_type == vs_utils.PHYS or s.endswith("_lod") or any(filepath.endswith(u) for u in ("skeleto.smd", "skel.smd"))):
+		if SmdImporterEx.smdSkip and (smd_type == vs_utils.PHYS or s.endswith("_lod") or any(filepath.endswith(u) for u in ("skeleto.smd", "skel.smd"))):
 			return 0
 		else:
 			return super().readSMD(filepath, upAxis, rotMode, newscene, smd_type, target_layer) # call parent method
@@ -473,19 +473,27 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 		default=0.01,
 	)
 	
+	frame_rate: bpy.props.IntProperty(
+		name="Frame Rate",
+		description="Sets Frame Rate of the project (Between 1 and 1000 FPS).",
+		min=1, max=1000,
+		soft_min=25, soft_max=60,
+		default=30,
+	)
+
 	scaleInvisibleZero: bpy.props.BoolProperty(
 		name="Scale invisible to zero",
 		description="If set entities will scaled to zero when not visible.",
 		default=False,
 	)
 	
-	bSkip: bpy.props.BoolProperty(
+	smdSkip: bpy.props.BoolProperty(
 		name="Skip Physic, LOD and Shared_Player_Skeleton meshes",
 		description="Skips the import of physic (collision) meshes if the .qc contains them.",
 		default = True
 	)
 	
-	aSkip: bpy.props.BoolProperty(
+	qcSkip: bpy.props.BoolProperty(
 		name="Skip Stattrack and Stickers",
 		description="Skips the import of Stattrack and Sticker meshes if the .qc contains them.",
 		default = True
@@ -526,7 +534,7 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 		finally:
 			bpy.utils.unregister_class(SmdImporterEx)
 			bpy.utils.register_class(vs_import_smd.SmdImporter)
-		
+
 		for area in context.screen.areas:
 			if area.type == 'VIEW_3D':
 				space = area.spaces.active
@@ -662,13 +670,13 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 			filePath = os.path.splitext(filePath)[0]
 			filePath = filePath + "/" + os.path.basename(filePath).lower() + ".qc"
 			
-			SmdImporterEx.bSkip = self.bSkip
+			SmdImporterEx.smdSkip = self.smdSkip
 			GAgrImporter.smd = None
 			GAgrImporter.onlyBones = self.onlyBones
 			modelData = None
 
 			try:
-				if self.aSkip and any(filePath.endswith(a) for a in ("stattrack.qc", "decal_a.qc", "decal_b.qc", "decal_c.qc", "decal_d.qc", "decal_e.qc")):
+				if self.qcSkip and any(filePath.endswith(a) for a in ("stattrack.qc", "decal_a.qc", "decal_b.qc", "decal_c.qc", "decal_d.qc", "decal_e.qc")):
 					return
 				bpy.ops.advancedfx.smd_importer_ex(filepath=filePath, doAnim=False)
 				modelData = ModelData(GAgrImporter.smd)
@@ -755,7 +763,8 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 	def readAgr(self,context):
 		file = None
 		result = { 'result': False, 'frameBegin': 1, 'frameEnd': None }
-		
+		bpy.context.scene.render.fps = self.frame_rate
+
 		try:
 			self.modelObjects = {}
 		
@@ -860,7 +869,7 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 							modelHandle.UpdateVisible(currentTime, False, self.interKey)
 						
 						unusedModelHandles.append(modelHandle)
-						#print("Marking %i (%s) as deleted/reusable." % (modelHandle.objNr,modelHandle.modelName)
+						#print("Marking %i (%s) as deleted/reusable." % (modelHandle.objNr,modelHandle.modelName))
 				
 				elif 'entity_state' == node0:
 					visible = None
