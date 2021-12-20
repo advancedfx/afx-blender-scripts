@@ -455,14 +455,14 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 	# Custom properties	
 	assetPath: bpy.props.StringProperty(
 		name="Asset Path",
-		description="Directory path containing the (decompiled) assets in a folder structure as in the pak01_dir.pak.",
+		description="Directory path containing the (decompiled) assets in a folder structure as in the pak01_dir.pak",
 		default="",
 		#subtype = 'DIR_PATH'
 	)
 
 	interKey: bpy.props.BoolProperty(
 		name="Add interpolated key frames",
-		description="Create interpolated key frames for frames in-between the original key frames.",
+		description="Create interpolated key frames for frames in-between the original key frames",
 		default=False)
 
 	global_scale: bpy.props.FloatProperty(
@@ -475,7 +475,7 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 	
 	frame_rate: bpy.props.IntProperty(
 		name="Frame Rate",
-		description="Sets Frame Rate of the project (Between 1 and 1000 FPS).",
+		description="This value should match your host_framerate setting. It sets Frame Rate of the project (Between 1 and 1000 FPS)",
 		min=1, max=1000,
 		soft_min=25, soft_max=60,
 		default=30,
@@ -483,25 +483,25 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 
 	scaleInvisibleZero: bpy.props.BoolProperty(
 		name="Scale invisible to zero",
-		description="If set entities will scaled to zero when not visible.",
+		description="If set entities will scaled to zero when not visible",
 		default=False,
 	)
 	
 	smdSkip: bpy.props.BoolProperty(
 		name="Skip Physic, LOD and Shared_Player_Skeleton meshes",
-		description="Skips the import of physic (collision) meshes if the .qc contains them.",
+		description="Skips the import of physic (collision) meshes if the .qc contains them",
 		default = True
 	)
 	
 	qcSkip: bpy.props.BoolProperty(
 		name="Skip Stattrack and Stickers",
-		description="Skips the import of Stattrack and Sticker meshes if the .qc contains them.",
+		description="Skips the import of Stattrack and Sticker meshes if the .qc contains them",
 		default = True
 	)
 	
 	onlyBones: bpy.props.BoolProperty(
 		name="Bones (skeleton) only",
-		description="Import only bones (skeletons) (faster).",
+		description="Import only bones (skeletons) (faster)",
 		default=False)
 		
 	modelInstancing: bpy.props.BoolProperty(
@@ -511,7 +511,7 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 	
 	keyframeInterpolation: bpy.props.EnumProperty(
 		name="Keyframe interpolation",
-		description="Constant recommended for beginners." if afx_utils.NEWER_THAN_290 else "Constant recommended for beginners. Advanced users can choose Bezier for significantly faster import times.",
+		description="Constant recommended for beginners." if afx_utils.NEWER_THAN_290 else "Constant recommended for beginners. Advanced users can choose Bezier for significantly faster import times",
 		items=[
 			('CONSTANT', "Constant (recommended)", "No interpolation"),
 			('LINEAR', "Linear", "Linear interpolation"),
