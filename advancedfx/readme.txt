@@ -50,7 +50,7 @@ For more informations visit it's Advancedfx Wiki page ( https://github.com/advan
 
 Changelog:
 
-1.14.0 (2022-03-11T21:36Z):
+1.14.1 (2022-03-11T22:28Z):
 - Added support for AGR version 6, still supports version 5.
 
 1.13.2 (2021-12-06T22:11Z):

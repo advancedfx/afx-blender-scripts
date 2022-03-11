@@ -634,19 +634,19 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 			v.targets[0].id = a
 			v.targets[0].data_path = 'hide_render'
 			
-		if self.scaleInvisibleZero:
+			if self.scaleInvisibleZero:
 			
-			ds = a.driver_add('scale')
-			
-			for df in ds:
-				d = df.driver
-				d.type = 'SCRIPTED'
-				d.use_self = True
-				h = d.variables.new()
-				h.name = 'hide'
-				h.targets[0].id = a
-				h.targets[0].data_path = 'hide_render'
-				d.expression = "(1-hide)*self"
+				ds = child.driver_add('scale')
+
+				for df in ds:
+					d = df.driver
+					d.type = 'SCRIPTED'
+					d.use_self = False
+					h = d.variables.new()
+					h.name = 'hide_render'
+					h.targets[0].id = a
+					h.targets[0].data_path = 'hide_render'
+					d.expression = "1-hide_render"
 
 		
 		return modelData
