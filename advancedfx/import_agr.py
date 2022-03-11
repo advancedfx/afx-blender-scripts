@@ -163,6 +163,19 @@ def ReadQuaternion(file, quakeFormat = False):
 		z = 0
 	
 	return mathutils.Quaternion((w,-y,x,z)) if quakeFormat else mathutils.Quaternion((w,x,y,z))
+	
+def ReadMatrix3x4(file):
+	mat = mathutils.Matrix()
+	for i in range(3):
+		for j in range(4):
+			val = ReadFloat(file)
+			if val is None:
+				return None
+			if math.isinf(val):
+				val = 0
+			mat[i][j] = val
+	
+	return mat
 
 def ReadAgrVersion(file):
 	buf = file.read(14)
@@ -230,6 +243,7 @@ class ModelHandle:
 		self.visible = None
 		self.location = None
 		self.rotation = None
+		self.scale = None
 		self.bones = None
 
 		# We are lazy, so we use frame 0 to set as not visible (initially) / hide_render 1:
@@ -241,6 +255,9 @@ class ModelHandle:
 		self.rotationXFrames = []
 		self.rotationYFrames = []
 		self.rotationZFrames = []
+		self.scaleXFrames = []
+		self.scaleYFrames = []
+		self.scaleZFrames = []
 		self.boneLocationXFrames = defaultdict(list)
 		self.boneLocationYFrames = defaultdict(list)
 		self.boneLocationZFrames = defaultdict(list)
@@ -248,6 +265,9 @@ class ModelHandle:
 		self.boneRotationXFrames = defaultdict(list)
 		self.boneRotationYFrames = defaultdict(list)
 		self.boneRotationZFrames = defaultdict(list)
+		self.boneScaleXFrames = defaultdict(list)
+		self.boneScaleYFrames = defaultdict(list)
+		self.boneScaleZFrames = defaultdict(list)
 	
 	def UpdateVisible(self,curTime,visible,interKey):
 		self.Update(curTime,interKey)
@@ -261,6 +281,10 @@ class ModelHandle:
 		self.Update(curTime,interKey)
 		self.rotation = rotation
 	
+	def UpdateScale(self,curTime,scale,interKey):
+		self.Update(curTime,interKey)
+		self.scale = scale
+
 	def UpdateBones(self,curTime,bones,interKey):
 		self.Update(curTime,interKey)
 		self.bones = bones
@@ -299,6 +323,13 @@ class ModelHandle:
 				self.rotationYFrames.extend((self.lastTime, self.rotation.y))
 				self.rotationZFrames.extend((self.lastTime, self.rotation.z))
 				
+			if self.scale is not None:
+				if interKey:
+					afx_utils.AppendInterKeys_Location(self.lastTime, self.scale, self.scaleXFrames, self.scaleYFrames, self.scaleZFrames)
+				self.scaleXFrames.extend((self.lastTime, self.scale.x))
+				self.scaleYFrames.extend((self.lastTime, self.scale.y))
+				self.scaleZFrames.extend((self.lastTime, self.scale.z))
+				
 			if self.bones is not None:
 				for idx,i in enumerate(self.bones):
 					
@@ -316,6 +347,7 @@ class ModelHandle:
 					if interKey:
 						afx_utils.AppendInterKeys_Location(self.lastTime, bone.location, self.boneLocationXFrames[i], self.boneLocationYFrames[i], self.boneLocationZFrames[i])
 						afx_utils.AppendInterKeys_Rotation(self.lastTime, renderRotQuat, self.boneRotationWFrames[i], self.boneRotationXFrames[i], self.boneRotationYFrames[i], self.boneRotationZFrames[i])
+						afx_utils.AppendInterKeys_Location(self.lastTime, bone.scale, self.boneScaleXFrames[i], self.boneScaleYFrames[i], self.boneScaleZFrames[i])
 					
 					self.boneLocationXFrames[i].extend((self.lastTime, bone.location.x))
 					self.boneLocationYFrames[i].extend((self.lastTime, bone.location.y))
@@ -325,6 +357,10 @@ class ModelHandle:
 					self.boneRotationXFrames[i].extend((self.lastTime, renderRotQuat.x))
 					self.boneRotationYFrames[i].extend((self.lastTime, renderRotQuat.y))
 					self.boneRotationZFrames[i].extend((self.lastTime, renderRotQuat.z))
+					
+					self.boneScaleXFrames[i].extend((self.lastTime, bone.scale.x))
+					self.boneScaleYFrames[i].extend((self.lastTime, bone.scale.y))
+					self.boneScaleZFrames[i].extend((self.lastTime, bone.scale.z))
 			
 			self.visible = None
 			self.location = None
@@ -568,6 +604,9 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 		
 		for i in range(4):
 			modelData.curves.append(action.fcurves.new("rotation_quaternion",index = i))
+
+		for i in range(3):
+			modelData.curves.append(action.fcurves.new("scale",index = i))
 		
 		num_bones = len(a.pose.bones)
 		
@@ -582,6 +621,9 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 			for j in range(4):
 				modelData.curves.append(action.fcurves.new(bone_string + "rotation_quaternion",index = j))
 				
+			for j in range(3):
+				modelData.curves.append(action.fcurves.new(bone_string + "scale",index = j))
+
 		# Create visibility driver:
 		
 		for child in a.children:
@@ -598,17 +640,14 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 			
 			for df in ds:
 				d = df.driver
-				d.type = 'AVERAGE'
-				v = d.variables.new()
-				v.name = 'hide_render'
-				v.targets[0].id = a
-				v.targets[0].data_path = 'hide_render'
-				m = df.modifiers.new('GENERATOR')
-				m.coefficients[0] = self.global_scale
-				m.coefficients[1] = -self.global_scale
-				m.poly_order = 1
-				m.mode = 'POLYNOMIAL'
-				m.use_additive = False
+				d.type = 'SCRIPTED'
+				d.use_self = True
+				h = d.variables.new()
+				h.name = 'hide'
+				h.targets[0].id = a
+				h.targets[0].data_path = 'hide_render'
+				d.expression = "(1-hide)*self"
+
 		
 		return modelData
 	
@@ -777,7 +816,7 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 				self.error('Invalid file format.')
 				return result
 				
-			if 5 != version:
+			if (5 != version and version != 6):
 				self.error('Version '+str(version)+' is not supported!')
 				return result
 				
@@ -873,11 +912,18 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 						
 						visible = ReadBool(file)
 						
-						renderOrigin = ReadVector(file, quakeFormat=True)
-						renderAngles = ReadQAngle(file)
+						if 5 == version:
+							renderOrigin = ReadVector(file, quakeFormat=True)
+							renderAngles = ReadQAngle(file)
+							renderRotQuat = renderAngles.to_quaternion()
+							renderScale =  mathutils.Vector((1,1,1)) 
+						else:
+							matrix = ReadMatrix3x4(file)
+							matrix = self.valveMatrixToBlender @ matrix
+							renderOrigin, renderRotQuat, renderScale = matrix.decompose()
 						
 						renderOrigin = renderOrigin * self.global_scale
-						renderRotQuat = renderAngles.to_quaternion()
+						renderScale = renderScale * self.global_scale
 						
 						modelHandle = handleToLastModelHandle.get(handle, None)
 						
@@ -925,6 +971,7 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 							modelHandle.UpdateVisible(currentTime, visible, self.interKey)
 							modelHandle.UpdateLocation(currentTime, renderOrigin, self.interKey)
 							modelHandle.UpdateRotation(currentTime, renderRotQuat, self.interKey)
+							modelHandle.UpdateScale(currentTime, renderScale, self.interKey)
 						
 					if dictionary.Peekaboo(file,'baseanimating'):
 						#skin = ReadInt(file)
@@ -938,8 +985,12 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 							
 							for i in range(numBones):
 								#pos = file.tell()
-								vec = ReadVector(file, quakeFormat=False)
-								quat = ReadQuaternion(file, quakeFormat=False)
+								if 5 == version:
+									vec = ReadVector(file, quakeFormat=False)
+									quat = ReadQuaternion(file, quakeFormat=False)
+									matrix = mathutils.Matrix.Translation(vec) @ quat.to_matrix().to_4x4()
+								else:
+									matrix = ReadMatrix3x4(file)
 								
 								if (modelData is None):
 									continue
@@ -953,12 +1004,11 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 									
 									#self.warning(str(pos)+": "+str(i)+"("+bone.name+"): "+str(vec)+" "+str(quat))
 									
-									matrix = mathutils.Matrix.Translation(vec) @ quat.to_matrix().to_4x4()
-									
 									if bone.parent:
 										matrix = bone.parent.matrix @ matrix
 									else:
-										matrix = self.valveMatrixToBlender @ matrix
+										if 5 == version:
+											matrix = self.valveMatrixToBlender @ matrix
 									
 									bone.matrix = matrix
 									
@@ -1034,9 +1084,11 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 				totalFrames += len(modelHandle.visibilityFrames)
 				totalFrames += len(modelHandle.locationXFrames) * 3
 				totalFrames += len(modelHandle.rotationWFrames) * 4
+				totalFrames += len(modelHandle.scaleXFrames) * 3
 				for i in modelHandle.boneLocationXFrames:
 					totalFrames += len(modelHandle.boneLocationXFrames[i]) * 3
 					totalFrames += len(modelHandle.boneRotationWFrames[i]) * 4
+					totalFrames += len(modelHandle.boneScaleXFrames[i]) * 3
 			if camData is not None:
 				camData.Update(None,self.interKey) #finish lingering updates
 				totalFrames += len(camData.locationXFrames) * 3
@@ -1068,16 +1120,22 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 				afx_utils.AddKeysList_Visible(curves[0].keyframe_points, modelHandle.visibilityFrames)
 				afx_utils.AddKeysList_Location(self.keyframeInterpolation, curves[1].keyframe_points, curves[2].keyframe_points, curves[3].keyframe_points, modelHandle.locationXFrames, modelHandle.locationYFrames, modelHandle.locationZFrames)
 				afx_utils.AddKeysList_Rotation(self.keyframeInterpolation, curves[4].keyframe_points, curves[5].keyframe_points, curves[6].keyframe_points, curves[7].keyframe_points, modelHandle.rotationWFrames, modelHandle.rotationXFrames, modelHandle.rotationYFrames, modelHandle.rotationZFrames)
-				updateImportProgress(len(modelHandle.visibilityFrames) + len(modelHandle.locationXFrames) * 3 + len(modelHandle.rotationWFrames) * 4)
+				afx_utils.AddKeysList_Location(self.keyframeInterpolation, curves[8].keyframe_points, curves[9].keyframe_points, curves[10].keyframe_points, modelHandle.scaleXFrames, modelHandle.scaleYFrames, modelHandle.scaleZFrames)
+				updateImportProgress(len(modelHandle.visibilityFrames) + len(modelHandle.locationXFrames) * 3 + len(modelHandle.rotationWFrames) * 4 + len(modelHandle.scaleXFrames) * 3)
 				currentFrames = 0
 				for i in modelHandle.boneLocationXFrames:
-					afx_utils.AddKeysList_Location(self.keyframeInterpolation, curves[7*i+8].keyframe_points, curves[7*i+9].keyframe_points, curves[7*i+10].keyframe_points, modelHandle.boneLocationXFrames[i], modelHandle.boneLocationYFrames[i], modelHandle.boneLocationZFrames[i])
+					afx_utils.AddKeysList_Location(self.keyframeInterpolation, curves[10*i+11].keyframe_points, curves[10*i+12].keyframe_points, curves[10*i+13].keyframe_points, modelHandle.boneLocationXFrames[i], modelHandle.boneLocationYFrames[i], modelHandle.boneLocationZFrames[i])
 					currentFrames += len(modelHandle.boneLocationXFrames[i]) * 3
 				updateImportProgress(currentFrames)
 				currentFrames = 0
 				for i in modelHandle.boneRotationWFrames:
-					afx_utils.AddKeysList_Rotation(self.keyframeInterpolation, curves[7*i+11].keyframe_points, curves[7*i+12].keyframe_points, curves[7*i+13].keyframe_points, curves[7*i+14].keyframe_points, modelHandle.boneRotationWFrames[i], modelHandle.boneRotationXFrames[i], modelHandle.boneRotationYFrames[i], modelHandle.boneRotationZFrames[i])
+					afx_utils.AddKeysList_Rotation(self.keyframeInterpolation, curves[10*i+14].keyframe_points, curves[10*i+15].keyframe_points, curves[10*i+16].keyframe_points, curves[10*i+17].keyframe_points, modelHandle.boneRotationWFrames[i], modelHandle.boneRotationXFrames[i], modelHandle.boneRotationYFrames[i], modelHandle.boneRotationZFrames[i])
 					currentFrames += len(modelHandle.boneRotationWFrames[i]) * 4
+				updateImportProgress(currentFrames)
+				currentFrames = 0
+				for i in modelHandle.boneScaleXFrames:
+					afx_utils.AddKeysList_Location(self.keyframeInterpolation, curves[10*i+18].keyframe_points, curves[10*i+19].keyframe_points, curves[10*i+20].keyframe_points, modelHandle.boneScaleXFrames[i], modelHandle.boneScaleYFrames[i], modelHandle.boneScaleZFrames[i])
+					currentFrames += len(modelHandle.boneScaleXFrames[i]) * 3
 				updateImportProgress(currentFrames)
 				for curve in curves:
 					curve.update()

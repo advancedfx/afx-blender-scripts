@@ -4,7 +4,7 @@ You need to install latest Blender Source Tools first
 ( http://steamreview.org/BlenderSourceTools/ ),
 since we depend on it.
 This version of afx-blender-scripts was tested using
-Blender Source Tools 3.1.0.
+Blender Source Tools 3.2.0.
 
 If you have a previous version of afx-blender-scripts installed, uninstall
 it first through Blender!
@@ -49,6 +49,9 @@ For more informations visit it's Advancedfx Wiki page ( https://github.com/advan
 
 
 Changelog:
+
+1.14.0 (2022-03-11T21:36Z):
+- Added support for AGR version 6, still supports version 5.
 
 1.13.2 (2021-12-06T22:11Z):
 - fix keyframes when there's multiple updates for same thing during a frame.
