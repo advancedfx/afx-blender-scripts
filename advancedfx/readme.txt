@@ -50,6 +50,9 @@ For more informations visit it's Advancedfx Wiki page ( https://github.com/advan
 
 Changelog:
 
+1.14.2 (2022-06-12T08:46Z):
+- fixed AGR Batch Export issue, which caused an error on export if an armature was deleted of the viewport
+
 1.14.1 (2022-03-11T22:28Z):
 - Added support for AGR version 6, still supports version 5.
 
