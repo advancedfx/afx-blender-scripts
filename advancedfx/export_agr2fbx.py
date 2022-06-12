@@ -46,43 +46,46 @@ class AgrExport(bpy.types.Operator):
 			self.filepath = self.filepath.rsplit(sep="\\", maxsplit=1)[0] + "\\"
 
 		# export model
+		bpy.ops.object.select_all(action='DESELECT')
 		for CurrentModel in bpy.data.objects:
 			if CurrentModel.name.find("afx.") != -1:
-				# select root
-				CurrentModel.select_set(1)
-				# select childrens
-				for CurrentChildren in CurrentModel.children:
-					CurrentChildren.select_set(1)
-				# rename top to root
-				CurrentObjectName = CurrentModel.name
-				CurrentModel.name = self.root_name
-				# export single objects as fbx
-				fullfiles = self.filepath + "/" + CurrentObjectName + ".fbx"
-				if self.skip_meshes:
-					bpy.ops.export_scene.fbx(
-						filepath = fullfiles, 
-						object_types={'ARMATURE'}, 
-						use_selection = True, 
-						global_scale =  self.global_scale, 
-						bake_anim_use_nla_strips = False, 
-						bake_anim_use_all_actions = False, 
-						bake_anim_simplify_factor = 0,
-						add_leaf_bones=False)
-				else:
-					bpy.ops.export_scene.fbx(
-						filepath = fullfiles,
-						object_types={'ARMATURE', 'MESH'},
-						use_selection = True,
-						global_scale =  self.global_scale, 
-						bake_anim_use_nla_strips = False, 
-						bake_anim_use_all_actions = False, 
-						bake_anim_simplify_factor = 0,
-						add_leaf_bones=False)
-				# undo all changes
-				CurrentModel.name = CurrentObjectName
-				CurrentModel.select_set(0)
-				for CurrentChildren in CurrentModel.children:
-					CurrentChildren.select_set(0)
+				for o in context.scene.objects:
+					if o.name == CurrentModel.name:
+         				# select root
+						CurrentModel.select_set(1)
+						# select childrens
+						for CurrentChildren in CurrentModel.children:
+							CurrentChildren.select_set(1)
+						# rename top to root
+						CurrentObjectName = CurrentModel.name
+						CurrentModel.name = self.root_name
+						# export single objects as fbx
+						fullfiles = self.filepath + "/" + CurrentObjectName + ".fbx"
+						if self.skip_meshes:
+							bpy.ops.export_scene.fbx(
+								filepath = fullfiles, 
+								object_types={'ARMATURE'}, 
+								use_selection = True, 
+								global_scale =  self.global_scale, 
+								bake_anim_use_nla_strips = False, 
+								bake_anim_use_all_actions = False, 
+								bake_anim_simplify_factor = 0,
+								add_leaf_bones=False)
+						else:
+							bpy.ops.export_scene.fbx(
+								filepath = fullfiles,
+								object_types={'ARMATURE', 'MESH'},
+								use_selection = True,
+								global_scale =  self.global_scale, 
+								bake_anim_use_nla_strips = False, 
+								bake_anim_use_all_actions = False, 
+								bake_anim_simplify_factor = 0,
+								add_leaf_bones=False)
+						# undo all changes
+						CurrentModel.name = CurrentObjectName
+						CurrentModel.select_set(0)
+						for CurrentChildren in CurrentModel.children:
+							CurrentChildren.select_set(0)
 
 		# export camera
 		for CameraData in bpy.data.objects:
