@@ -8,7 +8,7 @@ bl_info = {
 	"location": "File > Import/Export",
 	"description": "For inter-operation with HLAE.",
 	#"warning": "",
-	"wiki_url": "https://github.com/advancedfx/advancedfx/wiki/Source:mirv_agr",
+	"doc_url": "https://github.com/advancedfx/advancedfx/wiki/Source:mirv_agr",
 	"tracker_url": "https://github.com/advancedfx/afx-blender-scripts/issues",
 	"category": "Import-Export",
 }
