@@ -246,7 +246,7 @@ class BvhImporter(bpy.types.Operator, vs_utils.Logger):
 		file = None
 		
 		try:
-			file = open(self.filepath, 'rU')
+			file = open(self.filepath, 'r')
 			
 			rootName = ReadRootName(file)
 			if not rootName:

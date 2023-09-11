@@ -4,7 +4,7 @@ You need to install latest Blender Source Tools first
 ( http://steamreview.org/BlenderSourceTools/ ),
 since we depend on it.
 This version of afx-blender-scripts was tested using
-Blender Source Tools 3.2.0.
+Blender Source Tools 3.2.5.
 
 If you have a previous version of afx-blender-scripts installed, uninstall
 it first through Blender!
@@ -49,6 +49,10 @@ For more informations visit it's Advancedfx Wiki page ( https://github.com/advan
 
 
 Changelog:
+
+1.14.3 (2023-09-11T09:32Z):
+- fixed cam and bvh import for Blender 3.5+
+
 1.14.2 (2022-06-12T10:43Z):
 - fixed AGR Batch Export issue, which caused an error on export if an armature was deleted of the viewport
 - fixed documentation button in addon preferences

@@ -126,7 +126,7 @@ class CamImporter(bpy.types.Operator, vs_utils.Logger):
 		file = None
 		
 		try:
-			file = open(self.filepath, 'rU')
+			file = open(self.filepath, 'r')
 			
 			version = 0
 			scaleFov = ''
