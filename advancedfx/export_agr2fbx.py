@@ -8,9 +8,9 @@ class AgrExport(bpy.types.Operator):
 	bl_idname = "advancedfx.agr_to_fbx"
 	bl_label = "HLAE afxGameRecord"
 	bl_options = {'REGISTER', 'UNDO', 'PRESET'}
-	
+
 	filepath: bpy.props.StringProperty(subtype="DIR_PATH")
-	
+
 	global_scale: bpy.props.FloatProperty(
 		name="Scale",
 		description="Scale everything by this value",
@@ -30,15 +30,15 @@ class AgrExport(bpy.types.Operator):
 		description="Skips mesh export for faster export",
 		default=True,
 	)
-	
+
 	def menu_draw_export(self, context):
 		layout = self.layout
 		layout.operator("advancedfx.agr_to_fbx", text="HLAE afxGameRecord")
-	
+
 	def invoke(self, context, event):
 		context.window_manager.fileselect_add(self)
 		return {'RUNNING_MODAL'}
-	
+
 	def execute(self, context):
 		time_start = time.time()
 		# Change Filepath, if something got insert in the File Name box

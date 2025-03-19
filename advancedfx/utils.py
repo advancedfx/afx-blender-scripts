@@ -3,17 +3,18 @@ import math
 import bpy
 
 NEWER_THAN_290 = bpy.app.version >= (2, 90, 0)
+NEWER_THAN_440 = bpy.app.version >= (4, 4, 0)
 
 class QAngle:
 	def __init__(self,x,y,z):
 		self.x = x
 		self.y = y
 		self.z = z
-		
+
 	def to_quaternion(self):
 		pitchH = 0.5 * math.radians(self.x)
 		qPitchY = mathutils.Quaternion((math.cos(pitchH), -math.sin(pitchH), 0.0, 0.0))
-		
+
 		yawH = 0.5 * math.radians(self.y)
 		qYawZ = mathutils.Quaternion((math.cos(yawH), 0.0, 0.0, math.sin(yawH)))
 		 
@@ -27,12 +28,12 @@ def GetInterKeyRange(lastTime, time):
 	lo = int(math.ceil(loF))
 	if(lo == loF):
 		lo = lo + 1
-	
+
 	hiF = time
 	hi = int(math.floor(hiF))
 	if( hi == hiF ):
 		hi = hi -1
-	
+
 	return range(lo,hi+1)
 
 def AddKey_Value(interKey, keyframe_points, time, value):
@@ -40,7 +41,7 @@ def AddKey_Value(interKey, keyframe_points, time, value):
 		lastItem = keyframe_points[-1]
 		lastTime = lastItem.co[0]
 		lastValue = lastItem.co[1]
-		
+
 		for interTime in GetInterKeyRange(lastTime, time):
 			dT = (interTime -lastTime) / (time-lastTime)
 			interValue = lastValue * (1.0 - dT) + value * dT
@@ -48,7 +49,7 @@ def AddKey_Value(interKey, keyframe_points, time, value):
 			item = keyframe_points[-1]
 			item.co = [interTime, interValue]
 			item.interpolation = 'CONSTANT'
-	
+
 	keyframe_points.add(1)
 	item = keyframe_points[-1]
 	item.co = [time, value]
@@ -82,13 +83,13 @@ def AddKey_Visible(interKey, keyframe_points_hide_render, time, visible):
 		lastItem = keyframe_points_hide_render[-1]
 		lastTime = lastItem.co[0]
 		lastVisible = 0 == lastItem.co[1]
-		
+
 		for interTime in GetInterKeyRange(lastTime, time):
 			keyframe_points_hide_render.add(1)
 			item = keyframe_points_hide_render[-1]
 			item.co = [interTime, 0.0 if( lastVisible and visible ) else 1.0]
 			item.interpolation = 'CONSTANT'
-	
+
 	keyframe_points_hide_render.add(1)
 	item = keyframe_points_hide_render[-1]
 	item.co = [time, 0.0 if( visible ) else 1.0]
@@ -119,7 +120,7 @@ def AddKey_Location(interKey, keyframe_points_location_x, keyframe_points_locati
 		lastItemZ = keyframe_points_location_z[-1]
 		lastTime = lastItemX.co[0]
 		lastLocation = mathutils.Vector((lastItemX.co[1], lastItemY.co[1], lastItemZ.co[1]))
-		
+
 		for interTime in GetInterKeyRange(lastTime, time):
 			interLocation = lastLocation.lerp(location, (interTime -lastTime) / (time-lastTime))
 			keyframe_points_location_x.add(1)
@@ -134,7 +135,7 @@ def AddKey_Location(interKey, keyframe_points_location_x, keyframe_points_locati
 			itemX.interpolation = 'CONSTANT'
 			itemY.interpolation = 'CONSTANT'
 			itemZ.interpolation = 'CONSTANT'
-	
+
 	keyframe_points_location_x.add(1)
 	keyframe_points_location_y.add(1)
 	keyframe_points_location_z.add(1)
@@ -147,7 +148,7 @@ def AddKey_Location(interKey, keyframe_points_location_x, keyframe_points_locati
 	itemX.interpolation = 'CONSTANT'
 	itemY.interpolation = 'CONSTANT'
 	itemZ.interpolation = 'CONSTANT'
-	
+
 def AddKeysList_Location(interpolation, keyframe_points_x, keyframe_points_y, keyframe_points_z, data_x, data_y, data_z):
 	if len(data_x) < 2:
 		return
@@ -196,7 +197,7 @@ def AddKey_Rotation(interKey, keyframe_points_rotation_quaternion_w, keyframe_po
 		lastItemZ = keyframe_points_rotation_quaternion_z[-1]
 		lastTime = lastItemW.co[0]
 		lastRotation = mathutils.Quaternion((lastItemW.co[1], lastItemX.co[1], lastItemY.co[1], lastItemZ.co[1]))
-		
+
 		for interTime in GetInterKeyRange(lastTime, time):
 			interRotation = lastRotation.slerp(rotation, (interTime -lastTime) / (time-lastTime))
 			keyframe_points_rotation_quaternion_w.add(1)
@@ -215,7 +216,7 @@ def AddKey_Rotation(interKey, keyframe_points_rotation_quaternion_w, keyframe_po
 			itemX.interpolation = 'CONSTANT'
 			itemY.interpolation = 'CONSTANT'
 			itemZ.interpolation = 'CONSTANT'
-	
+
 	keyframe_points_rotation_quaternion_w.add(1)
 	keyframe_points_rotation_quaternion_x.add(1)
 	keyframe_points_rotation_quaternion_y.add(1)

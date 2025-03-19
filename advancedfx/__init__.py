@@ -3,7 +3,7 @@ import bpy
 bl_info = {
 	"name": "advancedfx Blender Scripts",
 	"author": "advancedfx.org",
-	"version": (1, 14, 3),
+	"version": (1, 14, 4),
 	"blender": (3, 5, 0),
 	"location": "File > Import/Export",
 	"description": "For inter-operation with HLAE.",
@@ -46,7 +46,7 @@ def register():
 	from bpy.utils import register_class
 	for cls in classes:
 		register_class(cls)
-	
+
 	bpy.types.TOPBAR_MT_file_import.append(menu_func_import_agr)
 	bpy.types.TOPBAR_MT_file_export.append(menu_func_export_agr2fbx)
 	bpy.types.TOPBAR_MT_file_import.append(menu_func_import_cam)
@@ -58,7 +58,7 @@ def unregister():
 	from bpy.utils import unregister_class
 	for cls in reversed(classes):
 		unregister_class(cls)
-	
+
 	bpy.types.TOPBAR_MT_file_export.remove(menu_func_export_bvh)
 	bpy.types.TOPBAR_MT_file_import.remove(menu_func_import_bvh)
 	bpy.types.TOPBAR_MT_file_import.remove(menu_func_import_agr)

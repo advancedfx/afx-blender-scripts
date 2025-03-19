@@ -28,12 +28,12 @@ def WriteHeader(file, frames, frameTime):
 	file.write("MOTION\n")
 	file.write("Frames: "+str(frames)+"\n")
 	file.write("Frame Time: "+FloatToBvhString(frameTime)+"\n")
-	
+
 class BvhExporter(bpy.types.Operator, vs_utils.Logger):
 	bl_idname = "advancedfx.bvhexporter"
 	bl_label = "HLAE old Cam IO (.bvh)"
 	bl_options = {'UNDO'}
-	
+
 	# Properties used by the file browser
 	filepath: bpy.props.StringProperty(subtype="FILE_PATH")
 	filter_glob: bpy.props.StringProperty(default="*.bvh", options={'HIDDEN'})
@@ -46,7 +46,7 @@ class BvhExporter(bpy.types.Operator, vs_utils.Logger):
 		soft_min=1.0, soft_max=1000.0,
 		default=100.0,
 	)
-	
+
 	frame_start: bpy.props.IntProperty(
 		name="Start Frame",
 		description="Starting frame to export",
@@ -61,76 +61,76 @@ class BvhExporter(bpy.types.Operator, vs_utils.Logger):
 
 	def execute(self, context):
 		ok = self.writeBvh(context)
-		
+
 		self.errorReport("Error report")
-		
+
 		return {'FINISHED'}
-	
+
 	def invoke(self, context, event):
 		self.frame_start = context.scene.frame_start
 		self.frame_end = context.scene.frame_end
-		
+
 		bpy.context.window_manager.fileselect_add(self)
-		
+
 		return {'RUNNING_MODAL'}
-	
+
 	def writeBvh(self, context):
 		scene = context.scene
 		frame_current = scene.frame_current
 		fps = context.scene.render.fps
-		
+
 		obj = context.active_object
-		
+
 		if obj is None:
 			self.error("No object selected.")
 			return False
-		
+
 		lastRot = None
-		
+
 		mRot = mathutils.Matrix.Rotation(math.radians(-90.0 if "CAMERA" == obj.type else 0.0), 4, 'X')
 		mTrans = mathutils.Matrix.Scale(-1,4,(-1.0, 0.0, 0.0))
-		
+
 		file = None
-		
+
 		try:
 			file = open(self.filepath, "w", encoding="utf8", newline="\n")
-			
+
 			frameCount = self.frame_end -self.frame_start +1
 			if frameCount < 0: frameCount = 0
-			
+
 			frameTime = 1.0
 			if 0.0 != fps: frameTime = frameTime / fps
-			
+
 			WriteHeader(file, frameCount, frameTime)
-		
+
 			for frame in range(self.frame_start, self.frame_end + 1):
 				scene.frame_set(frame)
-				
+
 				mat = obj.matrix_world
 				mat = mat @ mRot
-				
+
 				loc = mat.to_translation()
-				
+
 				rot = mat.to_euler('YXZ') if lastRot is None else mat.to_euler('YXZ', lastRot)
 				lastRot = rot
-				
-				
-				
+
+
+
 				X = -(-loc[0]) * self.global_scale
 				Y =  loc[2] * self.global_scale
 				Z = -loc[1] * self.global_scale
-				
+
 				XR = -math.degrees(-rot[0])
 				YR =  math.degrees( rot[2])
 				ZR = -math.degrees( rot[1])
-				
+
 				S = "" +FloatToBvhString(X) +" " +FloatToBvhString(Y) +" " +FloatToBvhString(Z) +" " +FloatToBvhString(ZR) +" " +FloatToBvhString(XR) +" " +FloatToBvhString(YR) + "\n"
 				file.write(S)
-			
+
 		finally:
 			if file is not None:
 				file.close()
-		
+
 		scene.frame_set(frame_current)
-		
+
 		return True

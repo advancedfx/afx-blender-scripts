@@ -50,6 +50,10 @@ For more informations visit it's Advancedfx Wiki page ( https://github.com/advan
 
 Changelog:
 
+1.14.4 (2025-03-19T11:42Z):
+- add support for Blender 4.4
+- removed unnecessary indents
+
 1.14.3 (2023-09-11T09:32Z):
 - fixed cam and bvh import for Blender 3.5+
 
