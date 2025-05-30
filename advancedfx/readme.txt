@@ -50,7 +50,7 @@ For more informations visit it's Advancedfx Wiki page ( https://github.com/advan
 
 Changelog:
 
-1.14.5 (2025-05-30T11:30Z):
+1.14.6 (2025-05-30T11:48Z):
 - Fixed bug with initalization of base classes
 
 1.14.4 (2025-03-19T11:42Z):
