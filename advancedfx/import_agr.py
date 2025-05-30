@@ -552,6 +552,10 @@ class AgrImporter(bpy.types.Operator, vs_utils.Logger):
 	valveMatrixToBlender = mathutils.Matrix.Rotation(math.pi/2,4,'Z')
 	blenderCamUpQuat = mathutils.Quaternion((math.cos(0.5 * math.radians(90.0)), math.sin(0.5* math.radians(90.0)), 0.0, 0.0))
 
+	def __init__(self, *args, **kwargs):
+		super().__init__(*args, **kwargs)
+		vs_utils.Logger.__init__(self)
+
 	def execute(self, context):
 		time_start = time.time()
 		result = None

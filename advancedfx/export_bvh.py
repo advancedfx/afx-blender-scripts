@@ -58,6 +58,9 @@ class BvhExporter(bpy.types.Operator, vs_utils.Logger):
 		default=0,
 	)
 
+	def __init__(self, *args, **kwargs):
+		super().__init__(*args, **kwargs)
+		vs_utils.Logger.__init__(self)
 
 	def execute(self, context):
 		ok = self.writeBvh(context)
